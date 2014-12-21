@@ -15,171 +15,171 @@ import android.view.View;
 public class ProgressView extends View
 {
 
-	public ProgressView(Context context) {
-		super(context);
-		init(context);
-	}
+    public ProgressView(Context context) {
+        super(context);
+        init(context);
+    }
 
-	public ProgressView(Context paramContext, AttributeSet paramAttributeSet) {
-		super(paramContext, paramAttributeSet);
-		init(paramContext);
-		
-	}
+    public ProgressView(Context paramContext, AttributeSet paramAttributeSet) {
+        super(paramContext, paramAttributeSet);
+        init(paramContext);
 
-	public ProgressView(Context paramContext, AttributeSet paramAttributeSet,
-			int paramInt) {
-		super(paramContext, paramAttributeSet, paramInt);
-		init(paramContext);
-	}
+    }
 
-	private Paint progressPaint, firstPaint, threePaint,breakPaint;//Èı¸öÑÕÉ«µÄ»­±Ê
-	private float firstWidth = 4f, threeWidth = 1f;//¶ÏµãµÄ¿í¶È
-	private LinkedList<Integer> linkedList = new LinkedList<Integer>();
-	private float perPixel = 0l;
-	private float countRecorderTime = 8000;//×ÜµÄÂ¼ÖÆÊ±¼ä
-	
-	public void setTotalTime(float time){
-		countRecorderTime = time;
-	}
-	
-	private void init(Context paramContext) {
-	        
-		progressPaint = new Paint();
-		firstPaint = new Paint();
-		threePaint = new Paint();
-		breakPaint = new Paint();
+    public ProgressView(Context paramContext, AttributeSet paramAttributeSet,
+                        int paramInt) {
+        super(paramContext, paramAttributeSet, paramInt);
+        init(paramContext);
+    }
 
-		// ±³¾°
-		setBackgroundColor(Color.parseColor("#19000000"));
+    private Paint progressPaint, firstPaint, threePaint,breakPaint;//ä¸‰ä¸ªé¢œè‰²çš„ç”»ç¬”
+    private float firstWidth = 4f, threeWidth = 1f;//æ–­ç‚¹çš„å®½åº¦
+    private LinkedList<Integer> linkedList = new LinkedList<Integer>();
+    private float perPixel = 0l;
+    private float countRecorderTime = 8000;//æ€»çš„å½•åˆ¶æ—¶é—´
 
-		// Ö÷Òª½ø¶ÈµÄÑÕÉ«
-		progressPaint.setStyle(Paint.Style.FILL);
-		progressPaint.setColor(Color.parseColor("#19e3cf"));
+    public void setTotalTime(float time){
+        countRecorderTime = time;
+    }
 
-		// Ò»ÉÁÒ»ÉÁµÄ»ÆÉ«½ø¶È
-		firstPaint.setStyle(Paint.Style.FILL);
-		firstPaint.setColor(Color.parseColor("#ffcc42"));
+    private void init(Context paramContext) {
 
-		// 3Ãë´¦µÄ½ø¶È
-		threePaint.setStyle(Paint.Style.FILL);
-		threePaint.setColor(Color.parseColor("#12a899"));
-		
-		breakPaint.setStyle(Paint.Style.FILL);
-		breakPaint.setColor(Color.parseColor("#000000"));
+        progressPaint = new Paint();
+        firstPaint = new Paint();
+        threePaint = new Paint();
+        breakPaint = new Paint();
 
-		DisplayMetrics dm = new DisplayMetrics();
-		((Activity)paramContext).getWindowManager().getDefaultDisplay().getMetrics(dm);
-		perPixel = dm.widthPixels/countRecorderTime;
-		
-		perSecProgress = perPixel;
-		
-	}
-	
-	/**
-	 * »æÖÆ×´Ì¬
-	 * @author QD
-	 *
-	 */
-	public static enum State {
-		START(0x1),PAUSE(0x2);
-		
-		static State mapIntToValue(final int stateInt) {
-			for (State value : State.values()) {
-				if (stateInt == value.getIntValue()) {
-					return value;
-				}
-			}
-			return PAUSE;
-		}
+        // èƒŒæ™¯
+        setBackgroundColor(Color.parseColor("#19000000"));
 
-		private int mIntValue;
+        // ä¸»è¦è¿›åº¦çš„é¢œè‰²
+        progressPaint.setStyle(Paint.Style.FILL);
+        progressPaint.setColor(Color.parseColor("#19e3cf"));
 
-		State(int intValue) {
-			mIntValue = intValue;
-		}
+        // ä¸€é—ªä¸€é—ªçš„é»„è‰²è¿›åº¦
+        firstPaint.setStyle(Paint.Style.FILL);
+        firstPaint.setColor(Color.parseColor("#ffcc42"));
 
-		int getIntValue() {
-			return mIntValue;
-		}
-	}
-	
-	
-	private volatile State currentState = State.PAUSE;//µ±Ç°×´Ì¬
-	private boolean isVisible = true;//Ò»ÉÁÒ»ÉÁµÄ»ÆÉ«ÇøÓòÊÇ·ñ¿É¼û
-	private float countWidth = 0;//Ã¿´Î»æÖÆÍê³É£¬½ø¶ÈÌõµÄ³¤¶È
-	private float perProgress = 0;//ÊÖÖ¸°´ÏÂÊ±£¬½ø¶ÈÌõÃ¿´ÎÔö³¤µÄ³¤¶È
-	private float perSecProgress = 0;//Ã¿ºÁÃë¶ÔÓ¦µÄÏñËØµã
-	private long initTime;//»æÖÆÍê³ÉÊ±µÄÊ±¼ä´Á
-	private long drawFlashTime = 0;//ÉÁ¶¯µÄ»ÆÉ«ÇøÓòÊ±¼ä´Á
-	
-	protected void onDraw(Canvas canvas) {
-		super.onDraw(canvas);
-		long curTime = System.currentTimeMillis();
-		//Log.i("recorder", curTime  - initTime + "");
-		countWidth = 0;
-		//Ã¿´Î»æÖÆ¶¼½«¶ÓÁĞÖĞµÄ¶ÏµãµÄÊ±¼äË³Ğò£¬»æÖÆ³öÀ´
-		if(!linkedList.isEmpty()){
-			float frontTime = 0;
-			Iterator<Integer> iterator = linkedList.iterator();
-			while(iterator.hasNext()){
-				int time = iterator.next();
-				//Çó³ö±¾´Î»æÖÆ¾ØĞÎµÄÆğµãÎ»ÖÃ
-				float left = countWidth;
-				//Çó³ö±¾´Î»æÖÆ¾ØĞÎµÄÖÕµãÎ»ÖÃ
-				countWidth += (time-frontTime)*perPixel;
-				//»æÖÆ½ø¶ÈÌõ
-				canvas.drawRect(left, 0,countWidth,getMeasuredHeight(),progressPaint);
-				//»æÖÆ¶Ïµã
-				canvas.drawRect(countWidth, 0,countWidth + threeWidth,getMeasuredHeight(),breakPaint);
-				countWidth += threeWidth;
-				
-				frontTime = time;
-			}
-			//»æÖÆÈıÃë´¦µÄ¶Ïµã
-			 if(linkedList.getLast() <= 3000)
-				canvas.drawRect(perPixel*3000, 0,perPixel*3000+threeWidth,getMeasuredHeight(),threePaint);
-		}else//»æÖÆÈıÃë´¦µÄ¶Ïµã
-			canvas.drawRect(perPixel*3000, 0,perPixel*3000+threeWidth,getMeasuredHeight(),threePaint);//»æÖÆÈıÃë´¦µÄ¾ØĞÎ
-		
-		//µ±ÊÖÖ¸°´×¡ÆÁÄ»Ê±£¬½ø¶ÈÌõ»áÔö³¤
-		if(currentState == State.START){
-			perProgress += perSecProgress*(curTime - initTime );
-			if(countWidth + perProgress <= getMeasuredWidth())
-				canvas.drawRect(countWidth, 0,countWidth + perProgress,getMeasuredHeight(),progressPaint);
-			else
-				canvas.drawRect(countWidth, 0,getMeasuredWidth(),getMeasuredHeight(),progressPaint);
-		}
-		//»æÖÆÒ»ÉÁÒ»ÉÁµÄ»ÆÉ«ÇøÓò£¬Ã¿500msÉÁ¶¯Ò»´Î
-		if(drawFlashTime==0 || curTime - drawFlashTime >= 500){
-			isVisible = !isVisible;
-			drawFlashTime = System.currentTimeMillis();
-		}
-		if(isVisible){
-			if(currentState == State.START)
-				canvas.drawRect(countWidth + perProgress, 0,countWidth + firstWidth + perProgress,getMeasuredHeight(),firstPaint);
-			else
-				canvas.drawRect(countWidth, 0,countWidth + firstWidth,getMeasuredHeight(),firstPaint);
-		}
-		//½áÊø»æÖÆÒ»ÉÁÒ»ÉÁµÄ»ÆÉ«ÇøÓò
-		initTime = System.currentTimeMillis();
-		invalidate();
-	}
-	
-	/**
-	 * ÉèÖÃ½ø¶ÈÌõµÄ×´Ì¬
-	 * @param state
-	 */
-	public void setCurrentState(State state){
-		currentState = state;
-		if(state == State.PAUSE)
-			perProgress = perSecProgress;
-	}
-	
-	/**
-	 * ÊÖÖ¸Ì§ÆğÊ±£¬½«Ê±¼äµã±£´æµ½¶ÓÁĞÖĞ
-	 * @param time:msÎªµ¥Î»
-	 */
-	public void putProgressList(int time) {
-		linkedList.add(time);
-	}
+        // 3ç§’å¤„çš„è¿›åº¦
+        threePaint.setStyle(Paint.Style.FILL);
+        threePaint.setColor(Color.parseColor("#12a899"));
+
+        breakPaint.setStyle(Paint.Style.FILL);
+        breakPaint.setColor(Color.parseColor("#000000"));
+
+        DisplayMetrics dm = new DisplayMetrics();
+        ((Activity)paramContext).getWindowManager().getDefaultDisplay().getMetrics(dm);
+        perPixel = dm.widthPixels/countRecorderTime;
+
+        perSecProgress = perPixel;
+
+    }
+
+    /**
+     * ç»˜åˆ¶çŠ¶æ€
+     * @author QD
+     *
+     */
+    public static enum State {
+        START(0x1),PAUSE(0x2);
+
+        static State mapIntToValue(final int stateInt) {
+            for (State value : State.values()) {
+                if (stateInt == value.getIntValue()) {
+                    return value;
+                }
+            }
+            return PAUSE;
+        }
+
+        private int mIntValue;
+
+        State(int intValue) {
+            mIntValue = intValue;
+        }
+
+        int getIntValue() {
+            return mIntValue;
+        }
+    }
+
+
+    private volatile State currentState = State.PAUSE;//å½“å‰çŠ¶æ€
+    private boolean isVisible = true;//ä¸€é—ªä¸€é—ªçš„é»„è‰²åŒºåŸŸæ˜¯å¦å¯è§
+    private float countWidth = 0;//æ¯æ¬¡ç»˜åˆ¶å®Œæˆï¼Œè¿›åº¦æ¡çš„é•¿åº¦
+    private float perProgress = 0;//æ‰‹æŒ‡æŒ‰ä¸‹æ—¶ï¼Œè¿›åº¦æ¡æ¯æ¬¡å¢é•¿çš„é•¿åº¦
+    private float perSecProgress = 0;//æ¯æ¯«ç§’å¯¹åº”çš„åƒç´ ç‚¹
+    private long initTime;//ç»˜åˆ¶å®Œæˆæ—¶çš„æ—¶é—´æˆ³
+    private long drawFlashTime = 0;//é—ªåŠ¨çš„é»„è‰²åŒºåŸŸæ—¶é—´æˆ³
+
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        long curTime = System.currentTimeMillis();
+        //Log.i("recorder", curTime  - initTime + "");
+        countWidth = 0;
+        //æ¯æ¬¡ç»˜åˆ¶éƒ½å°†é˜Ÿåˆ—ä¸­çš„æ–­ç‚¹çš„æ—¶é—´é¡ºåºï¼Œç»˜åˆ¶å‡ºæ¥
+        if(!linkedList.isEmpty()){
+            float frontTime = 0;
+            Iterator<Integer> iterator = linkedList.iterator();
+            while(iterator.hasNext()){
+                int time = iterator.next();
+                //æ±‚å‡ºæœ¬æ¬¡ç»˜åˆ¶çŸ©å½¢çš„èµ·ç‚¹ä½ç½®
+                float left = countWidth;
+                //æ±‚å‡ºæœ¬æ¬¡ç»˜åˆ¶çŸ©å½¢çš„ç»ˆç‚¹ä½ç½®
+                countWidth += (time-frontTime)*perPixel;
+                //ç»˜åˆ¶è¿›åº¦æ¡
+                canvas.drawRect(left, 0,countWidth,getMeasuredHeight(),progressPaint);
+                //ç»˜åˆ¶æ–­ç‚¹
+                canvas.drawRect(countWidth, 0,countWidth + threeWidth,getMeasuredHeight(),breakPaint);
+                countWidth += threeWidth;
+
+                frontTime = time;
+            }
+            //ç»˜åˆ¶ä¸‰ç§’å¤„çš„æ–­ç‚¹
+            if(linkedList.getLast() <= 3000)
+                canvas.drawRect(perPixel*3000, 0,perPixel*3000+threeWidth,getMeasuredHeight(),threePaint);
+        }else//ç»˜åˆ¶ä¸‰ç§’å¤„çš„æ–­ç‚¹
+            canvas.drawRect(perPixel*3000, 0,perPixel*3000+threeWidth,getMeasuredHeight(),threePaint);//ç»˜åˆ¶ä¸‰ç§’å¤„çš„çŸ©å½¢
+
+        //å½“æ‰‹æŒ‡æŒ‰ä½å±å¹•æ—¶ï¼Œè¿›åº¦æ¡ä¼šå¢é•¿
+        if(currentState == State.START){
+            perProgress += perSecProgress*(curTime - initTime );
+            if(countWidth + perProgress <= getMeasuredWidth())
+                canvas.drawRect(countWidth, 0,countWidth + perProgress,getMeasuredHeight(),progressPaint);
+            else
+                canvas.drawRect(countWidth, 0,getMeasuredWidth(),getMeasuredHeight(),progressPaint);
+        }
+        //ç»˜åˆ¶ä¸€é—ªä¸€é—ªçš„é»„è‰²åŒºåŸŸï¼Œæ¯500msé—ªåŠ¨ä¸€æ¬¡
+        if(drawFlashTime==0 || curTime - drawFlashTime >= 500){
+            isVisible = !isVisible;
+            drawFlashTime = System.currentTimeMillis();
+        }
+        if(isVisible){
+            if(currentState == State.START)
+                canvas.drawRect(countWidth + perProgress, 0,countWidth + firstWidth + perProgress,getMeasuredHeight(),firstPaint);
+            else
+                canvas.drawRect(countWidth, 0,countWidth + firstWidth,getMeasuredHeight(),firstPaint);
+        }
+        //ç»“æŸç»˜åˆ¶ä¸€é—ªä¸€é—ªçš„é»„è‰²åŒºåŸŸ
+        initTime = System.currentTimeMillis();
+        invalidate();
+    }
+
+    /**
+     * è®¾ç½®è¿›åº¦æ¡çš„çŠ¶æ€
+     * @param state
+     */
+    public void setCurrentState(State state){
+        currentState = state;
+        if(state == State.PAUSE)
+            perProgress = perSecProgress;
+    }
+
+    /**
+     * æ‰‹æŒ‡æŠ¬èµ·æ—¶ï¼Œå°†æ—¶é—´ç‚¹ä¿å­˜åˆ°é˜Ÿåˆ—ä¸­
+     * @param time:msä¸ºå•ä½
+     */
+    public void putProgressList(int time) {
+        linkedList.add(time);
+    }
 }

@@ -12,212 +12,212 @@ import android.view.TextureView;
 import android.view.View;
 
 public class VideoPlayTextureView extends TextureView implements
-		TextureView.SurfaceTextureListener, OnPreparedListener,
-		OnCompletionListener {
+        TextureView.SurfaceTextureListener, OnPreparedListener,
+        OnCompletionListener {
 
-	private MediaPlayer mediaPlayer;
-	private Surface surface;
-	private MediaStateLitenser mediaStateLitenser;
-	private MediaState currentMediaState = MediaState.RESET;
-	private boolean isChange = true;//µ±¼ÓÔØÍêÊÓÆµÎÄ¼şÊ±£¬ÅĞ¶Ïµ±Ç°SurfaceViewÊÇ·ñ»¹ÊÇÖ®Ç°µÄSurfaceView
-	
-	public void setChange(boolean change){
-		isChange = change;
-	}
-	
-	public boolean isChange(){
-		return isChange;
-	}
+    private MediaPlayer mediaPlayer;
+    private Surface surface;
+    private MediaStateLitenser mediaStateLitenser;
+    private MediaState currentMediaState = MediaState.RESET;
+    private boolean isChange = true;//å½“åŠ è½½å®Œè§†é¢‘æ–‡ä»¶æ—¶ï¼Œåˆ¤æ–­å½“å‰SurfaceViewæ˜¯å¦è¿˜æ˜¯ä¹‹å‰çš„SurfaceView
 
-	public VideoPlayTextureView(Context context) {
-		super(context);
-		init(context);
-	}
+    public void setChange(boolean change){
+        isChange = change;
+    }
 
-	public VideoPlayTextureView(Context context, AttributeSet paramAttributeSet) {
-		super(context, paramAttributeSet);
-		init(context);
-	}
+    public boolean isChange(){
+        return isChange;
+    }
 
-	public VideoPlayTextureView(Context paramContext,
-			AttributeSet paramAttributeSet, int paramInt) {
-		super(paramContext, paramAttributeSet, paramInt);
-		init(paramContext);
-	}
+    public VideoPlayTextureView(Context context) {
+        super(context);
+        init(context);
+    }
 
-	/**
-	 * ³õÊ¼»¯Êı¾İ
-	 * @param context
-	 */
-	private void init(Context context) {
-		mediaPlayer = new MediaPlayer();
-		setSurfaceTextureListener(this);
-		mediaPlayer.setOnCompletionListener(this);
-		mediaPlayer.setOnPreparedListener(this);
-	}
+    public VideoPlayTextureView(Context context, AttributeSet paramAttributeSet) {
+        super(context, paramAttributeSet);
+        init(context);
+    }
 
-	protected void onMeasure(int paramInt1, int paramInt2) {
-		int i = View.MeasureSpec.getSize(paramInt1);
-		setMeasuredDimension(i, i);
-	}
+    public VideoPlayTextureView(Context paramContext,
+                                AttributeSet paramAttributeSet, int paramInt) {
+        super(paramContext, paramAttributeSet, paramInt);
+        init(paramContext);
+    }
 
-	/**
-	 * ²¥·Åµ±Ç°µÄÊÓÆµ£¬Èç¹ûÒÑ¾­ÔÚ²¥·ÅÔòÔİÍ££¬·ñÔò¶¼¿ªÊ¼²¥·Å
-	 */
-	public void play() {
-		if(currentMediaState ==  MediaState.PLAY){
-			currentMediaState = MediaState.PAUSE;
-			if (mediaPlayer != null)
-				mediaPlayer.pause();
-			if(mediaStateLitenser != null)
-				mediaStateLitenser.OnPauseListener();
-		}else{
-			currentMediaState = MediaState.PLAY;
-			if(mediaStateLitenser != null)
-				mediaStateLitenser.OnPlayListener();
-			if (mediaPlayer != null && !mediaPlayer.isPlaying())
-				mediaPlayer.start();
-		}
-	}
+    /**
+     * åˆå§‹åŒ–æ•°æ®
+     * @param context
+     */
+    private void init(Context context) {
+        mediaPlayer = new MediaPlayer();
+        setSurfaceTextureListener(this);
+        mediaPlayer.setOnCompletionListener(this);
+        mediaPlayer.setOnPreparedListener(this);
+    }
 
-	/**
-	 * ÔİÍ£²¥·Å
-	 */
-	public void pause() {
-		if (mediaPlayer != null && mediaPlayer.isPlaying()){
-			currentMediaState = MediaState.PAUSE;
-			mediaPlayer.pause();
-			if(mediaStateLitenser != null)
-				mediaStateLitenser.OnPauseListener();
-		}
-	}
+    protected void onMeasure(int paramInt1, int paramInt2) {
+        int i = View.MeasureSpec.getSize(paramInt1);
+        setMeasuredDimension(i, i);
+    }
 
-	/**
-	 * Í£Ö¹²¥·Å£¬ÔİÊ±Ã»Ê¹ÓÃ
-	 */
-	public void stop() {
-		if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-			currentMediaState = MediaState.RESET;
-			mediaPlayer.stop();
-			mediaPlayer.release();
-		}
-	}
-	
-	/**
-	 * ÖØÖÃµ±Ç°mediaPlyer£¬ÔÚlistViewÖØÓÃ¸Ã¿Ø¼şÊ±µ÷ÓÃ
-	 */
-	public void reset(){
-		currentMediaState = MediaState.RESET;
-		mediaPlayer.reset();
-	}
+    /**
+     * æ’­æ”¾å½“å‰çš„è§†é¢‘ï¼Œå¦‚æœå·²ç»åœ¨æ’­æ”¾åˆ™æš‚åœï¼Œå¦åˆ™éƒ½å¼€å§‹æ’­æ”¾
+     */
+    public void play() {
+        if(currentMediaState ==  MediaState.PLAY){
+            currentMediaState = MediaState.PAUSE;
+            if (mediaPlayer != null)
+                mediaPlayer.pause();
+            if(mediaStateLitenser != null)
+                mediaStateLitenser.OnPauseListener();
+        }else{
+            currentMediaState = MediaState.PLAY;
+            if(mediaStateLitenser != null)
+                mediaStateLitenser.OnPlayListener();
+            if (mediaPlayer != null && !mediaPlayer.isPlaying())
+                mediaPlayer.start();
+        }
+    }
 
-	/**
-	 * ×¼±¸²¥·ÅÖ®Ç°¶î×¼±¸¶¯×÷£¬Í¬²½µ÷ÓÃ£¬ÊÊºÏÓÚÎÄ¼ş
-	 * Èç¹ûÊÇÁ÷£¬µ÷ÓÃasyncPrepare()
-	 * @param path
-	 */
-	public void prepare(String path) {
-		try {
-			currentMediaState = MediaState.PREPARE;
-			mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-			mediaPlayer.setDataSource(path);
-			mediaPlayer.setSurface(surface);
-			mediaPlayer.prepare();
-		} catch (Exception e) {
-		}
-	}
-	
-	public MediaState getMediaState(){
-		return currentMediaState;
-	}
+    /**
+     * æš‚åœæ’­æ”¾
+     */
+    public void pause() {
+        if (mediaPlayer != null && mediaPlayer.isPlaying()){
+            currentMediaState = MediaState.PAUSE;
+            mediaPlayer.pause();
+            if(mediaStateLitenser != null)
+                mediaStateLitenser.OnPauseListener();
+        }
+    }
 
-	@Override
-	public void onSurfaceTextureAvailable(SurfaceTexture arg0, int arg1,
-			int arg2) {
-		surface = new Surface(arg0);
-	}
+    /**
+     * åœæ­¢æ’­æ”¾ï¼Œæš‚æ—¶æ²¡ä½¿ç”¨
+     */
+    public void stop() {
+        if (mediaPlayer != null && mediaPlayer.isPlaying()) {
+            currentMediaState = MediaState.RESET;
+            mediaPlayer.stop();
+            mediaPlayer.release();
+        }
+    }
 
-	@Override
-	public boolean onSurfaceTextureDestroyed(SurfaceTexture arg0) {
-		return false;
-	}
+    /**
+     * é‡ç½®å½“å‰mediaPlyerï¼Œåœ¨listViewé‡ç”¨è¯¥æ§ä»¶æ—¶è°ƒç”¨
+     */
+    public void reset(){
+        currentMediaState = MediaState.RESET;
+        mediaPlayer.reset();
+    }
 
-	@Override
-	public void onSurfaceTextureSizeChanged(SurfaceTexture arg0, int arg1,
-			int arg2) {
+    /**
+     * å‡†å¤‡æ’­æ”¾ä¹‹å‰é¢å‡†å¤‡åŠ¨ä½œï¼ŒåŒæ­¥è°ƒç”¨ï¼Œé€‚åˆäºæ–‡ä»¶
+     * å¦‚æœæ˜¯æµï¼Œè°ƒç”¨asyncPrepare()
+     * @param path
+     */
+    public void prepare(String path) {
+        try {
+            currentMediaState = MediaState.PREPARE;
+            mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            mediaPlayer.setDataSource(path);
+            mediaPlayer.setSurface(surface);
+            mediaPlayer.prepare();
+        } catch (Exception e) {
+        }
+    }
 
-	}
+    public MediaState getMediaState(){
+        return currentMediaState;
+    }
 
-	@Override
-	public void onSurfaceTextureUpdated(SurfaceTexture arg0) {
+    @Override
+    public void onSurfaceTextureAvailable(SurfaceTexture arg0, int arg1,
+                                          int arg2) {
+        surface = new Surface(arg0);
+    }
 
-	}
+    @Override
+    public boolean onSurfaceTextureDestroyed(SurfaceTexture arg0) {
+        return false;
+    }
 
-	/**
-	 * ÉèÖÃ²¥·Å×´Ì¬µÄ¼àÌı
-	 * @param mediaStateLitenser
-	 */
-	public void setMediaStateLitenser(MediaStateLitenser mediaStateLitenser) {
-		this.mediaStateLitenser = mediaStateLitenser;
-	}
+    @Override
+    public void onSurfaceTextureSizeChanged(SurfaceTexture arg0, int arg1,
+                                            int arg2) {
 
-	/**
-	 * ²¥·Å×´Ì¬
-	 * @author QD
-	 *
-	 */
-	public enum MediaState {
-		RESET(0x5),PREPARE(0x1), COMPLETE(0x2), PLAY(0x3), PAUSE(0x4);
-		static MediaState mapIntToValue(final int stateInt) {
-			for (MediaState value : MediaState.values()) {
-				if (stateInt == value.getIntValue()) {
-					return value;
-				}
-			}
-			return RESET;
-		}
+    }
 
-		private int mIntValue;
+    @Override
+    public void onSurfaceTextureUpdated(SurfaceTexture arg0) {
 
-		MediaState(int intValue) {
-			mIntValue = intValue;
-		}
+    }
 
-		int getIntValue() {
-			return mIntValue;
-		}
-	}
-	
-	/**
-	 * ¿ªÊ¼ÊÓÆµÎÄ¼şÏÂÔØÊÓµ÷ÓÃ
-	 */
-	public void OnDownLoadingListener(){
-		if (mediaStateLitenser != null)
-			mediaStateLitenser.OnDownLoadingListener();
-	}
+    /**
+     * è®¾ç½®æ’­æ”¾çŠ¶æ€çš„ç›‘å¬
+     * @param mediaStateLitenser
+     */
+    public void setMediaStateLitenser(MediaStateLitenser mediaStateLitenser) {
+        this.mediaStateLitenser = mediaStateLitenser;
+    }
 
-	public interface MediaStateLitenser {
-		public void OnCompletionListener();
+    /**
+     * æ’­æ”¾çŠ¶æ€
+     * @author QD
+     *
+     */
+    public enum MediaState {
+        RESET(0x5),PREPARE(0x1), COMPLETE(0x2), PLAY(0x3), PAUSE(0x4);
+        static MediaState mapIntToValue(final int stateInt) {
+            for (MediaState value : MediaState.values()) {
+                if (stateInt == value.getIntValue()) {
+                    return value;
+                }
+            }
+            return RESET;
+        }
 
-		public void OnPrepareListener();
+        private int mIntValue;
 
-		public void OnPauseListener();
+        MediaState(int intValue) {
+            mIntValue = intValue;
+        }
 
-		public void OnPlayListener();
-		
-		public void OnDownLoadingListener();
-	}
+        int getIntValue() {
+            return mIntValue;
+        }
+    }
 
-	@Override
-	public void onCompletion(MediaPlayer mp) {
-		if (mediaStateLitenser != null)
-			mediaStateLitenser.OnCompletionListener();
-		currentMediaState = MediaState.COMPLETE;
-	}
+    /**
+     * å¼€å§‹è§†é¢‘æ–‡ä»¶ä¸‹è½½è§†è°ƒç”¨
+     */
+    public void OnDownLoadingListener(){
+        if (mediaStateLitenser != null)
+            mediaStateLitenser.OnDownLoadingListener();
+    }
 
-	@Override
-	public void onPrepared(MediaPlayer mp) {
-		if (mediaStateLitenser != null)
-			mediaStateLitenser.OnPrepareListener();
-	}
+    public interface MediaStateLitenser {
+        public void OnCompletionListener();
+
+        public void OnPrepareListener();
+
+        public void OnPauseListener();
+
+        public void OnPlayListener();
+
+        public void OnDownLoadingListener();
+    }
+
+    @Override
+    public void onCompletion(MediaPlayer mp) {
+        if (mediaStateLitenser != null)
+            mediaStateLitenser.OnCompletionListener();
+        currentMediaState = MediaState.COMPLETE;
+    }
+
+    @Override
+    public void onPrepared(MediaPlayer mp) {
+        if (mediaStateLitenser != null)
+            mediaStateLitenser.OnPrepareListener();
+    }
 }
