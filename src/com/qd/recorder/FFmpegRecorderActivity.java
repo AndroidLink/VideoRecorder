@@ -62,25 +62,35 @@ import android.widget.TextView;
 import com.googlecode.javacv.FrameRecorder;
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
 import com.qd.recorder.ProgressView.State;
+import com.qd.recorder.helper.RuntimeHelper;
 import com.qd.videorecorder.R;
 
-
-
-
+import butterknife.ButterKnife;
+import butterknife.InjectView;
+import butterknife.OnClick;
 
 
 public class FFmpegRecorderActivity extends Activity implements OnClickListener, OnTouchListener {
-
-    private final static String CLASS_LABEL = "RecordActivity";
-    private final static String LOG_TAG = CLASS_LABEL;
+    private final static String TAG = FFmpegRecorderActivity.class.getSimpleName();
 
     private PowerManager.WakeLock mWakeLock;
+    private void ensureWakeLock() {
+        if (null == mWakeLock) {
+            mWakeLock = RuntimeHelper.acquireWakeLock(this);
+        }
+    }
+    private void releaseWakeLock() {
+        RuntimeHelper.releaseWakeLock(mWakeLock);
+        mWakeLock = null;
+    }
+
     //视频文件的存放地址
     private String strVideoPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "rec_video.mp4";
     //视频文件对象
     private File fileVideoPath = null;
     //视频文件在系统中存放的url
     private Uri uriVideoPath = null;
+
     //判断是否需要录制，点击下一步时暂停录制
     private boolean rec = false;
     //判断是否需要录制，手指按下继续，抬起时暂停
@@ -89,9 +99,14 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
     boolean	isRecordingStarted = false;
     //是否开启闪光灯
     boolean isFlashOn = false;
-    TextView txtTimer, txtRecordingSize;
+
+//    TextView txtTimer, txtRecordingSize;
     //分别为闪光灯按钮、取消按钮、下一步按钮、转置摄像头按钮
-    Button flashIcon = null,cancelBtn,nextBtn,switchCameraIcon = null;
+    @InjectView(R.id.recorder_cancel)Button cancelBtn;
+    @InjectView(R.id.recorder_flashlight) Button flashIcon;
+    @InjectView(R.id.recorder_next) Button nextBtn;
+    @InjectView(R.id.recorder_frontcamera) Button switchCameraIcon;
+
     boolean nextEnabled = false;
 
     //录制视频和保存音频的类
@@ -135,9 +150,10 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
 		}
 	};*/
 
-    private Dialog dialog = null;
+//    private Dialog dialog = null;
     //包含显示摄像头数据的surfaceView
-    RelativeLayout topLayout = null;
+    @InjectView(R.id.recorder_surface_parent)
+    RelativeLayout topLayout;
 
     //第一次按下屏幕时记录的时间
     long firstTime = 0;
@@ -172,7 +188,7 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
     private volatile long mAudioTimeRecorded;
     private long frameTime = 0L;
     //每一幀的数据结构
-    private SavedFrames lastSavedframe = new SavedFrames(null,0L);
+    private SavedFrames lastSavedframe = new SavedFrames(null, 0L);
     //视频时间戳
     private long mVideoTimestamp = 0L;
     //时候保存过视频文件
@@ -180,11 +196,12 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
     private boolean isFinalizing = false;
 
     //进度条
-    private ProgressView progressView;
+    @InjectView(R.id.recorder_progress) ProgressView progressView;
     //捕获的第一幀的图片
     private String imagePath = null;
     private RecorderState currentRecorderState = RecorderState.PRESS;
-    private ImageView stateImageView;
+
+    @InjectView(R.id.recorder_surface_state) ImageView stateImageView;
 
     private byte[] firstData = null;
 
@@ -271,9 +288,9 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
 
         setContentView(R.layout.activity_recorder);
 
-        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        mWakeLock = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, CLASS_LABEL);
-        mWakeLock.acquire();
+        ButterKnife.inject(this);
+
+        ensureWakeLock();
 
         DisplayMetrics displaymetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
@@ -299,24 +316,18 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
         super.onResume();
         mHandler.sendEmptyMessage(2);
 
-        if (mWakeLock == null) {
-            //获取唤醒锁,保持屏幕常亮
-            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-            mWakeLock = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, CLASS_LABEL);
-            mWakeLock.acquire();
-        }
+        ensureWakeLock();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        if(!isFinalizing)
+        if(!isFinalizing) {
             finish();
-
-        if (mWakeLock != null) {
-            mWakeLock.release();
-            mWakeLock = null;
+            isFinalizing = true;
         }
+
+        releaseWakeLock();
     }
 
     @Override
@@ -339,24 +350,22 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
         firstData = null;
         mCamera = null;
         cameraView = null;
-        if (mWakeLock != null) {
-            mWakeLock.release();
-            mWakeLock = null;
-        }
+
+        releaseWakeLock();
     }
     private void initLayout()
     {
-        stateImageView = (ImageView) findViewById(R.id.recorder_surface_state);
+//        stateImageView = (ImageView) findViewById(R.id.recorder_surface_state);
 
-        progressView = (ProgressView) findViewById(R.id.recorder_progress);
-        cancelBtn = (Button) findViewById(R.id.recorder_cancel);
-        cancelBtn.setOnClickListener(this);
-        nextBtn = (Button) findViewById(R.id.recorder_next);
-        nextBtn.setOnClickListener(this);
+//        progressView = (ProgressView) findViewById(R.id.recorder_progress);
+//        cancelBtn = (Button) findViewById(R.id.recorder_cancel);
+//        cancelBtn.setOnClickListener(this);
+//        nextBtn = (Button) findViewById(R.id.recorder_next);
+//        nextBtn.setOnClickListener(this);
         //txtTimer = (TextView)findViewById(R.id.txtTimer);
-        flashIcon = (Button)findViewById(R.id.recorder_flashlight);
-        switchCameraIcon = (Button)findViewById(R.id.recorder_frontcamera);
-        flashIcon.setOnClickListener(this);
+//        flashIcon = (Button)findViewById(R.id.recorder_flashlight);
+//        switchCameraIcon = (Button)findViewById(R.id.recorder_frontcamera);
+//        flashIcon.setOnClickListener(this);
 
         if (getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT)) {
             switchCameraIcon.setVisibility(View.VISIBLE);
@@ -390,7 +399,7 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
                     return;
                 }
 
-                topLayout = (RelativeLayout) findViewById(R.id.recorder_surface_parent);
+//                topLayout = (RelativeLayout) findViewById(R.id.recorder_surface_parent);
                 if(topLayout != null && topLayout.getChildCount() > 0)
                     topLayout.removeAllViews();
 
@@ -416,7 +425,7 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
 
                 topLayout.setOnTouchListener(FFmpegRecorderActivity.this);
 
-                switchCameraIcon.setOnClickListener(FFmpegRecorderActivity.this);
+//                switchCameraIcon.setOnClickListener(FFmpegRecorderActivity.this);
                 if(cameraSelection == CameraInfo.CAMERA_FACING_FRONT)
                     flashIcon.setVisibility(View.GONE);
                 else
@@ -1130,47 +1139,71 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
     public void onClick(View v) {
         //下一步
         if(v.getId() == R.id.recorder_next){
-            if (isRecordingStarted) {
-                rec = false;
-                saveRecording();
-            }else
-                initiateRecording(false);
+            onNextButtonClicked();
         }else if(v.getId() == R.id.recorder_flashlight){
-            if(!getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)){
-                //showToast(this, "不能开启闪光灯");
-                return;
-            }
-            //闪光灯
-            if(isFlashOn){
-                isFlashOn = false;
-                flashIcon.setSelected(false);
-                cameraParameters.setFlashMode(Parameters.FLASH_MODE_OFF);
-            }
-            else{
-                isFlashOn = true;
-                flashIcon.setSelected(true);
-                cameraParameters.setFlashMode(Parameters.FLASH_MODE_TORCH);
-            }
-            mCamera.setParameters(cameraParameters);
+            onFlashButtonClicked();
         }else if(v.getId() == R.id.recorder_frontcamera){
-            //转换摄像头
-            cameraSelection = ((cameraSelection == CameraInfo.CAMERA_FACING_BACK) ? CameraInfo.CAMERA_FACING_FRONT:CameraInfo.CAMERA_FACING_BACK);
-            initCameraLayout();
+            onCameraSwap();
+        } else if(v.getId() == R.id.recorder_cancel){
+            onCancelButtonClicked();
+        }
+    }
 
-            if(cameraSelection == CameraInfo.CAMERA_FACING_FRONT)
-                flashIcon.setVisibility(View.GONE);
-            else{
-                flashIcon.setVisibility(View.VISIBLE);
-                if(isFlashOn){
-                    cameraParameters.setFlashMode(Parameters.FLASH_MODE_TORCH);
-                    mCamera.setParameters(cameraParameters);
-                }
+    @OnClick(R.id.recorder_flashlight)
+    public void onFlashButtonClicked() {
+        if (!initSuccess) return;
+
+        if(!getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)){
+            //showToast(this, "不能开启闪光灯");
+            return;
+        }
+        //闪光灯
+        if(isFlashOn){
+            isFlashOn = false;
+            flashIcon.setSelected(false);
+            cameraParameters.setFlashMode(Parameters.FLASH_MODE_OFF);
+        }
+        else{
+            isFlashOn = true;
+            flashIcon.setSelected(true);
+            cameraParameters.setFlashMode(Parameters.FLASH_MODE_TORCH);
+        }
+        mCamera.setParameters(cameraParameters);
+    }
+
+    @OnClick(R.id.recorder_frontcamera)
+    public void onCameraSwap() {
+        if (!initSuccess) return;
+
+        //转换摄像头
+        cameraSelection = ((cameraSelection == CameraInfo.CAMERA_FACING_BACK) ? CameraInfo.CAMERA_FACING_FRONT:CameraInfo.CAMERA_FACING_BACK);
+        initCameraLayout();
+
+        if(cameraSelection == CameraInfo.CAMERA_FACING_FRONT)
+            flashIcon.setVisibility(View.GONE);
+        else{
+            flashIcon.setVisibility(View.VISIBLE);
+            if(isFlashOn){
+                cameraParameters.setFlashMode(Parameters.FLASH_MODE_TORCH);
+                mCamera.setParameters(cameraParameters);
             }
-        }else if(v.getId() == R.id.recorder_cancel){
-            if (recording)
-                showCancellDialog();
-            else
-                videoTheEnd(false);
+        }
+    }
+    @OnClick(R.id.recorder_next)
+    public void onNextButtonClicked() {
+        if (isRecordingStarted) {
+            rec = false;
+            saveRecording();
+        } else {
+            initiateRecording(false);
+        }
+    }
+    @OnClick(R.id.recorder_cancel)
+    public void onCancelButtonClicked() {
+        if (recording) {
+            showCancellDialog();
+        } else {
+            videoTheEnd(false);
         }
     }
 
