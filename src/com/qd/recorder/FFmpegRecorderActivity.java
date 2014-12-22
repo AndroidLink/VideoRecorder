@@ -13,7 +13,6 @@ import java.nio.ShortBuffer;
 import java.util.Collections;
 import java.util.List;
 
-import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
@@ -48,7 +47,6 @@ import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.View.OnTouchListener;
 import android.view.ViewGroup.LayoutParams;
 import android.view.Window;
@@ -65,12 +63,11 @@ import com.qd.recorder.ProgressView.State;
 import com.qd.recorder.helper.RuntimeHelper;
 import com.qd.videorecorder.R;
 
-import butterknife.ButterKnife;
 import butterknife.InjectView;
 import butterknife.OnClick;
 
 
-public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClickListener, OnTouchListener {
+public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouchListener {
     private final static String TAG = FFmpegRecorderActivity.class.getSimpleName();
 
     private PowerManager.WakeLock mWakeLock;
@@ -102,7 +99,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
 
 //    TextView txtTimer, txtRecordingSize;
     //分别为闪光灯按钮、取消按钮、下一步按钮、转置摄像头按钮
-    @InjectView(R.id.recorder_cancel)Button cancelBtn;
+//    @InjectView(R.id.recorder_cancel)Button cancelBtn;
     @InjectView(R.id.recorder_flashlight) Button flashIcon;
     @InjectView(R.id.recorder_next) Button nextBtn;
     @InjectView(R.id.recorder_frontcamera) Button switchCameraIcon;
@@ -235,9 +232,9 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
                         stateImageView.setImageResource(resId);
                         break;
                     case 3:
-                        if(!recording)
+                        if(!recording) {
                             initiateRecording(true);
-                        else{
+                        } else {
                             //更新暂停的时间
                             stopPauseTime = System.currentTimeMillis();
                             totalPauseTime = stopPauseTime - startPauseTime - ((long) (1.0/(double)frameRate)*1000);
@@ -257,21 +254,45 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
                         startPauseTime = System.currentTimeMillis();
                         if(totalTime >= recordingMinimumTime){
                             currentRecorderState = RecorderState.SUCCESS;
-                            mHandler.sendEmptyMessage(2);
+                            sendStateUpdateMessage();
                         }else if(totalTime >= recordingChangeTime){
                             currentRecorderState = RecorderState.CHANGE;
-                            mHandler.sendEmptyMessage(2);
+                            sendStateUpdateMessage();
                         }
                         break;
                     case 5:
                         currentRecorderState = RecorderState.SUCCESS;
-                        mHandler.sendEmptyMessage(2);
+                        sendStateUpdateMessage();
                         break;
                     default:
                         break;
                 }
             }
         };
+    }
+
+    private void sendStateUpdateMessage() {
+        mHandler.sendEmptyMessage(2);
+    }
+    private void clearTouchMessage() {
+        mHandler.removeMessages(3);
+        mHandler.removeMessages(4);
+    }
+    private void sendTouchDownMessage() {
+        //如果MediaRecorder没有被初始化
+        //执行初始化
+        clearTouchMessage();
+        mHandler.sendEmptyMessageDelayed(3, 300);
+    }
+    private void sendTouchUpMessage() {
+        clearTouchMessage();
+        if(rec) {
+            mHandler.sendEmptyMessage(4);
+        }
+    }
+
+    private void sendMiniFilmReadyMessage() {
+        mHandler.sendEmptyMessage(5);
     }
 
     //neon库对opencv做了优化
@@ -312,7 +333,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
     @Override
     protected void onResume() {
         super.onResume();
-        mHandler.sendEmptyMessage(2);
+        sendStateUpdateMessage();
 
         ensureWakeLock();
     }
@@ -378,8 +399,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
             protected Boolean doInBackground(String... params) {
                 boolean result = setCamera();
 
-                if(!initSuccess){
-
+                if(!initSuccess) {
                     initVideoRecorder();
                     startRecording();
 
@@ -398,8 +418,9 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
                 }
 
 //                topLayout = (RelativeLayout) findViewById(R.id.recorder_surface_parent);
-                if(topLayout != null && topLayout.getChildCount() > 0)
+                if(topLayout != null && topLayout.getChildCount() > 0) {
                     topLayout.removeAllViews();
+                }
 
                 cameraView = new CameraView(FFmpegRecorderActivity.this, cameraDevice);
 
@@ -424,22 +445,19 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
                 topLayout.setOnTouchListener(FFmpegRecorderActivity.this);
 
 //                switchCameraIcon.setOnClickListener(FFmpegRecorderActivity.this);
-                if(cameraSelection == CameraInfo.CAMERA_FACING_FRONT)
+                if(cameraSelection == CameraInfo.CAMERA_FACING_FRONT) {
                     flashIcon.setVisibility(View.GONE);
-                else
+                } else {
                     flashIcon.setVisibility(View.VISIBLE);
+                }
             }
 
         }.execute("start");
     }
 
-    private boolean setCamera()
-    {
-        try
-        {
-
-            if(Build.VERSION.SDK_INT > Build.VERSION_CODES.FROYO)
-            {
+    private boolean setCamera() {
+        try {
+            if(Build.VERSION.SDK_INT > Build.VERSION_CODES.FROYO) {
                 int numberOfCameras = Camera.getNumberOfCameras();
 
                 CameraInfo cameraInfo = new CameraInfo();
@@ -450,20 +468,20 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
                     }
                 }
             }
+
             stopPreview();
             if(mCamera != null)
                 mCamera.release();
 
-            if(defaultCameraId >= 0)
+            if(defaultCameraId >= 0) {
                 cameraDevice = Camera.open(defaultCameraId);
-            else
+            } else {
                 cameraDevice = Camera.open();
-
-        }
-        catch(Exception e)
-        {
+            }
+        } catch(Exception e) {
             return false;
         }
+
         return true;
     }
 
@@ -493,11 +511,9 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
     }
 
     public void startRecording() {
-
         try {
             videoRecorder.start();
             audioThread.start();
-
         } catch (NewFFmpegFrameRecorder.Exception e) {
             e.printStackTrace();
         }
@@ -508,7 +524,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
      * @author QD
      *
      */
-    public class AsyncStopRecording extends AsyncTask<Void,Integer,Void>{
+    public class AsyncStopRecording extends AsyncTask<Void,Integer,Void> {
 
         private ProgressBar bar;
         private TextView progress;
@@ -659,15 +675,13 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
      *
      */
     class AudioRecordRunnable implements Runnable {
-
         int bufferSize;
         short[] audioData;
         int bufferReadResult;
         private final AudioRecord audioRecord;
         public volatile boolean isInitialized;
         private int mCount =0;
-        private AudioRecordRunnable()
-        {
+        private AudioRecordRunnable() {
             bufferSize = AudioRecord.getMinBufferSize(sampleRate,
                     AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
             audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate,
@@ -679,65 +693,56 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
          * shortBuffer包含了音频的数据和起始位置
          * @param shortBuffer
          */
-        private void record(ShortBuffer shortBuffer)
-        {
-            try
-            {
-                synchronized (mAudioRecordLock)
-                {
-                    if (videoRecorder != null)
-                    {
+        private void record(ShortBuffer shortBuffer) {
+            try {
+                synchronized (mAudioRecordLock) {
+                    if (videoRecorder != null) {
                         this.mCount += shortBuffer.limit();
                         videoRecorder.record(0,new Buffer[] {shortBuffer});
                     }
                     return;
                 }
+            } catch (FrameRecorder.Exception localException){
+                localException.printStackTrace();
             }
-            catch (FrameRecorder.Exception localException){}
         }
 
         /**
          * 更新音频的时间戳
          */
-        private void updateTimestamp()
-        {
-            if (videoRecorder != null)
-            {
+        private void updateTimestamp() {
+            if (videoRecorder != null) {
                 int i = Util.getTimeStampInNsFromSampleCounted(this.mCount);
-                if (mAudioTimestamp != i)
-                {
+                if (mAudioTimestamp != i) {
                     mAudioTimestamp = i;
                     mAudioTimeRecorded =  System.nanoTime();
                 }
             }
         }
 
-        public void run()
-        {
+        public void run() {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
             this.isInitialized = false;
-            if(audioRecord != null)
-            {
+            if(audioRecord != null) {
                 //判断音频录制是否被初始化
-                while (this.audioRecord.getState() == 0)
-                {
-                    try
-                    {
+                while (this.audioRecord.getState() == 0) {
+                    try {
                         Thread.sleep(100L);
-                    }
-                    catch (InterruptedException localInterruptedException)
-                    {
+                    } catch (InterruptedException localInterruptedException) {
+                        localInterruptedException.printStackTrace();
                     }
                 }
+
                 this.isInitialized = true;
                 this.audioRecord.startRecording();
-                while (((runAudioThread) || (mVideoTimestamp > mAudioTimestamp)) && (mAudioTimestamp < (1000 * recordingTime)))
-                {
+                while (((runAudioThread) || (mVideoTimestamp > mAudioTimestamp)) &&
+                        (mAudioTimestamp < (1000 * recordingTime))) {
                     updateTimestamp();
                     bufferReadResult = this.audioRecord.read(audioData, 0, audioData.length);
                     if ((bufferReadResult > 0) && ((recording && rec) || (mVideoTimestamp > mAudioTimestamp)))
                         record(ShortBuffer.wrap(audioData, 0, bufferReadResult));
                 }
+
                 this.audioRecord.stop();
                 this.audioRecord.release();
             }
@@ -747,7 +752,6 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
     //获取第一幀的图片
     private boolean isFirstFrame = true;
 
-
     /**
      * 显示摄像头的内容，以及返回摄像头的每一帧数据
      * @author QD
@@ -756,7 +760,6 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
     class CameraView extends SurfaceView implements SurfaceHolder.Callback, PreviewCallback {
 
         private SurfaceHolder mHolder;
-
 
         public CameraView(Context context, Camera camera) {
             super(context);
@@ -780,8 +783,9 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
         }
 
         public void surfaceChanged(SurfaceHolder  holder, int format, int width, int height) {
-            if (isPreviewOn)
+            if (isPreviewOn) {
                 mCamera.stopPreview();
+            }
             handleSurfaceChanged();
             startPreview();
             mCamera.autoFocus(null);
@@ -792,8 +796,8 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
             try {
                 mHolder.addCallback(null);
                 mCamera.setPreviewCallback(null);
-
             } catch (RuntimeException e) {
+                e.printStackTrace();
             }
         }
 
@@ -810,27 +814,21 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
                 mCamera.stopPreview();
             }
         }
-        private byte[] rotateYUV420Degree90(byte[] data, int imageWidth, int imageHeight)
-        {
-
+        private byte[] rotateYUV420Degree90(byte[] data, int imageWidth, int imageHeight) {
             byte [] yuv = new byte[imageWidth*imageHeight*3/2];
             // Rotate the Y luma
             int i = 0;
-            for(int x = 0;x < imageWidth;x++)
-            {
+            for(int x = 0;x < imageWidth;x++) {
                 for(int y = imageHeight-1;y >= 0;y--)
                 {
                     yuv[i] = data[y*imageWidth+x];
                     i++;
                 }
-
             }
             // Rotate the U and V color components
             i = imageWidth*imageHeight*3/2-1;
-            for(int x = imageWidth-1;x > 0;x=x-2)
-            {
-                for(int y = 0;y < imageHeight/2;y++)
-                {
+            for(int x = imageWidth-1;x > 0;x=x-2) {
+                for(int y = 0;y < imageHeight/2;y++) {
                     yuv[i] = data[(imageWidth*imageHeight)+(y*imageWidth)+x];
                     i--;
                     yuv[i] = data[(imageWidth*imageHeight)+(y*imageWidth)+(x-1)];
@@ -840,8 +838,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
             return yuv;
         }
 
-        private byte[] rotateYUV420Degree180(byte[] data, int imageWidth, int imageHeight)
-        {
+        private byte[] rotateYUV420Degree180(byte[] data, int imageWidth, int imageHeight) {
             byte [] yuv = new byte[imageWidth*imageHeight*3/2];
             int i = 0;
             int count = 0;
@@ -860,14 +857,12 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
             return yuv;
         }
 
-        private byte[] rotateYUV420Degree270(byte[] data, int imageWidth, int imageHeight)
-        {
+        private byte[] rotateYUV420Degree270(byte[] data, int imageWidth, int imageHeight) {
             byte [] yuv = new byte[imageWidth*imageHeight*3/2];
             int nWidth = 0, nHeight = 0;
             int wh = 0;
             int uvHeight = 0;
-            if(imageWidth != nWidth || imageHeight != nHeight)
-            {
+            if(imageWidth != nWidth || imageHeight != nHeight) {
                 nWidth = imageWidth;
                 nHeight = imageHeight;
                 wh = imageWidth * imageHeight;
@@ -950,12 +945,11 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
         public void onPreviewFrame(byte[] data, Camera camera) {
             //计算时间戳
             long frameTimeStamp = 0L;
-            if(mAudioTimestamp == 0L && firstTime > 0L)
-                frameTimeStamp = 1000L * (System.currentTimeMillis() -firstTime);
-            else if (mLastAudioTimestamp == mAudioTimestamp)
+            if (mAudioTimestamp == 0L && firstTime > 0L) {
+                frameTimeStamp = 1000L * (System.currentTimeMillis() - firstTime);
+            } else if (mLastAudioTimestamp == mAudioTimestamp) {
                 frameTimeStamp = mAudioTimestamp + frameTime;
-            else
-            {
+            } else {
                 long l2 = (System.nanoTime() - mAudioTimeRecorded) / 1000L;
                 frameTimeStamp = l2 + mAudioTimestamp;
                 mLastAudioTimestamp = mAudioTimestamp;
@@ -963,8 +957,8 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
 
             //录制视频
             synchronized (mVideoRecordLock) {
-                if (recording && rec && lastSavedframe != null && lastSavedframe.getFrameBytesData() != null && yuvIplImage != null)
-                {
+                if (recording && rec && lastSavedframe != null &&
+                        lastSavedframe.getFrameBytesData() != null && yuvIplImage != null) {
                     //保存某一幀的图片
                     if(isFirstFrame){
                         isFirstFrame = false;
@@ -973,8 +967,8 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
 					msg.obj = data;
 					msg.what = 1;
 					mHandler.sendMessage(msg);*/
-
                     }
+
                     //超过最低时间时，下一步按钮可点击
                     totalTime = System.currentTimeMillis() - firstTime - pausedTime - ((long) (1.0/(double)frameRate)*1000);
                     if(!nextEnabled && totalTime >= recordingChangeTime){
@@ -982,24 +976,26 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
                         nextBtn.setEnabled(true);
                     }
 
-                    if(nextEnabled && totalTime >= recordingMinimumTime){
-                        mHandler.sendEmptyMessage(5);
+                    if (nextEnabled && totalTime >= recordingMinimumTime) {
+                        sendMiniFilmReadyMessage();
                     }
 
                     if(currentRecorderState == RecorderState.PRESS && totalTime >= recordingChangeTime){
                         currentRecorderState = RecorderState.LOOSEN;
-                        mHandler.sendEmptyMessage(2);
+                        sendStateUpdateMessage();
                     }
 
                     mVideoTimestamp += frameTime;
-                    if(lastSavedframe.getTimeStamp() > mVideoTimestamp)
+                    if(lastSavedframe.getTimeStamp() > mVideoTimestamp) {
                         mVideoTimestamp = lastSavedframe.getTimeStamp();
+                    }
+
                     try {
                         yuvIplImage.getByteBuffer().put(lastSavedframe.getFrameBytesData());
                         videoRecorder.setTimestamp(lastSavedframe.getTimeStamp());
                         videoRecorder.record(yuvIplImage);
                     } catch (com.googlecode.javacv.FrameRecorder.Exception e) {
-                        Log.i("recorder", "录制错误"+e.getMessage());
+                        Log.i("recorder", "录制错误" + e.getMessage());
                         e.printStackTrace();
                     }
                 }
@@ -1013,26 +1009,18 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-
-        if(!recordFinish){
-            if(totalTime< recordingTime){
+        if (!recordFinish) {
+            if (totalTime < recordingTime) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
-                        //如果MediaRecorder没有被初始化
-                        //执行初始化
-                        mHandler.removeMessages(3);
-                        mHandler.removeMessages(4);
-                        mHandler.sendEmptyMessageDelayed(3,300);
+                        sendTouchDownMessage();
                         break;
                     case MotionEvent.ACTION_UP:
-                        mHandler.removeMessages(3);
-                        mHandler.removeMessages(4);
-                        if(rec)
-                            mHandler.sendEmptyMessage(4);
+                        sendTouchUpMessage();
 
                         break;
                 }
-            }else{
+            } else {
                 //如果录制时间超过最大时间，保存视频
                 rec = false;
                 saveRecording();
@@ -1132,19 +1120,6 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClic
             mCamera.setDisplayOrientation(90);
         mCamera.setParameters(cameraParameters);
 
-    }
-    @Override
-    public void onClick(View v) {
-        //下一步
-        if(v.getId() == R.id.recorder_next){
-            onNextButtonClicked();
-        }else if(v.getId() == R.id.recorder_flashlight){
-            onFlashButtonClicked();
-        }else if(v.getId() == R.id.recorder_frontcamera){
-            onCameraSwap();
-        } else if(v.getId() == R.id.recorder_cancel){
-            onCancelButtonClicked();
-        }
     }
 
     @OnClick(R.id.recorder_flashlight)

@@ -161,8 +161,7 @@ public class Util {
 		return filePath;
 	}
 
-	public static String createFinalPath(Context context)
-	{
+	public static String createFinalPath(Context context) {
 		long dateTaken = System.currentTimeMillis();
 		String title = CONSTANTS.FILE_START_NAME + dateTaken;
 		String filename = title + CONSTANTS.VIDEO_EXTENSION;

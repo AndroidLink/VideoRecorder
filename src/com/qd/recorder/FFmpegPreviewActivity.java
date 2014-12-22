@@ -42,6 +42,8 @@ public class FFmpegPreviewActivity extends BaseInjectActivity implements OnCompl
         if(mediaPlayer.isPlaying()){
             mediaPlayer.pause();
             imagePlay.setVisibility(View.VISIBLE);
+        } else {
+            onPlayViewClicked();
         }
     }
 
