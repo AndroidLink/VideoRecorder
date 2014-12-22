@@ -70,7 +70,7 @@ import butterknife.InjectView;
 import butterknife.OnClick;
 
 
-public class FFmpegRecorderActivity extends Activity implements OnClickListener, OnTouchListener {
+public class FFmpegRecorderActivity extends BaseInjectActivity implements OnClickListener, OnTouchListener {
     private final static String TAG = FFmpegRecorderActivity.class.getSimpleName();
 
     private PowerManager.WakeLock mWakeLock;
@@ -287,8 +287,6 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_recorder);
-
-        ButterKnife.inject(this);
 
         ensureWakeLock();
 
@@ -1225,33 +1223,31 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
      * 设置返回结果
      * @param valid
      */
-    private void returnToCaller(boolean valid)
-    {
-        try{
+    private void returnToCaller(boolean valid) {
+        try {
             setActivityResult(valid);
-            if(valid){
-                Intent intent = new Intent(this,FFmpegPreviewActivity.class);
-                intent.putExtra("path", strVideoPath);
-                intent.putExtra("imagePath", imagePath);
+            if(valid) {
+                Intent intent = new Intent(this, FFmpegEffectActivity.class);
+                intent.putExtra(CONSTANTS.EXTRA_VIDEO_PATH, strVideoPath);
+                intent.putExtra(CONSTANTS.EXTRA_SNAP_PATH, imagePath);
                 startActivity(intent);
             }
-        } catch (Throwable e)
-        {
-        }finally{
+        } catch (Throwable e) {
+            e.printStackTrace();
+        } finally {
             finish();
         }
     }
 
-    private void setActivityResult(boolean valid)
-    {
+    private void setActivityResult(boolean valid) {
         Intent resultIntent = new Intent();
         int resultCode;
-        if (valid)
-        {
+        if (valid) {
             resultCode = RESULT_OK;
             resultIntent.setData(uriVideoPath);
-        } else
+        } else {
             resultCode = RESULT_CANCELED;
+        }
 
         setResult(resultCode, resultIntent);
     }

@@ -43,6 +43,9 @@
             android:name="com.qd.recorder.FFmpegPreviewActivity"
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen"  >
         </activity>
+        <activity android:screenOrientation="portrait"
+            android:name="com.qd.recorder.FFmpegEffectActivity"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"  />
     </application>
 
 </manifest>
