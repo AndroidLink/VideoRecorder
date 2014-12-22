@@ -122,7 +122,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     //音频的采样率，recorderParameters中会有默认值
     private int sampleRate = 44100;
     //调用系统的录制音频类
-    private AudioRecord audioRecord;
+//    private AudioRecord audioRecord;
     //录制音频的线程
     private AudioRecordRunnable audioRecordRunnable;
     private Thread audioThread;
