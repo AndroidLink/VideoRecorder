@@ -8,8 +8,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.Buffer;
-import java.nio.ShortBuffer;
 import java.util.Collections;
 import java.util.List;
 
@@ -28,9 +26,6 @@ import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.Parameters;
 import android.hardware.Camera.PreviewCallback;
 import android.hardware.Camera.Size;
-import android.media.AudioFormat;
-import android.media.AudioRecord;
-import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -57,9 +52,9 @@ import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import com.googlecode.javacv.FrameRecorder;
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
 import com.qd.recorder.ProgressView.State;
+import com.qd.recorder.helper.RecorderHelper;
 import com.qd.recorder.helper.RuntimeHelper;
 import com.qd.videorecorder.R;
 
@@ -81,6 +76,8 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
         mWakeLock = null;
     }
 
+    private RecorderHelper mRecordHelper;
+
     //视频文件的存放地址
     private String strVideoPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "rec_video.mp4";
     //视频文件对象
@@ -88,10 +85,9 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     //视频文件在系统中存放的url
     private Uri uriVideoPath = null;
 
-    //判断是否需要录制，点击下一步时暂停录制
-    private boolean rec = false;
+
     //判断是否需要录制，手指按下继续，抬起时暂停
-    boolean recording = false;
+//    boolean recording = false;
     //判断是否开始了录制，第一次按下屏幕时设置为true
     boolean	isRecordingStarted = false;
     //是否开启闪光灯
@@ -106,9 +102,6 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
 
     boolean nextEnabled = false;
 
-    //录制视频和保存音频的类
-    private volatile NewFFmpegFrameRecorder videoRecorder;
-
     //判断是否是前置摄像头
     private boolean isPreviewOn = false;
     //当前录制的质量，会影响视频清晰度和文件大小
@@ -119,15 +112,10 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     private int previewWidth = 480, screenWidth = 480;
     private int previewHeight = 480, screenHeight = 800;
 
-    //音频的采样率，recorderParameters中会有默认值
-    private int sampleRate = 44100;
+//    //音频的采样率，recorderParameters中会有默认值
+//    private int sampleRate = 44100;
     //调用系统的录制音频类
 //    private AudioRecord audioRecord;
-    //录制音频的线程
-    private AudioRecordRunnable audioRecordRunnable;
-    private Thread audioThread;
-    //开启和停止录制音频的标记
-    volatile boolean runAudioThread = true;
 
     //摄像头以及它的参数
     private Camera cameraDevice;
@@ -166,28 +154,19 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     long totalTime = 0;
     //视频帧率
     private int frameRate = 30;
-    //录制的最长时间
-    private int recordingTime = 8000;
-    //录制的最短时间
-    private int recordingMinimumTime = 6000;
     //提示换个场景
     private int recordingChangeTime = 3000;
 
     boolean recordFinish = false;
     private  Dialog creatingProgress;
 
-    //音频时间戳
-    private volatile long mAudioTimestamp = 0L;
     //以下两个只做同步标志，没有实际意义
     private final int[] mVideoRecordLock = new int[0];
-    private final int[] mAudioRecordLock = new int[0];
     private long mLastAudioTimestamp = 0L;
-    private volatile long mAudioTimeRecorded;
     private long frameTime = 0L;
     //每一幀的数据结构
     private SavedFrames lastSavedframe = new SavedFrames(null, 0L);
-    //视频时间戳
-    private long mVideoTimestamp = 0L;
+
     //时候保存过视频文件
     private boolean isRecordingSaved = false;
     private boolean isFinalizing = false;
@@ -232,7 +211,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
                         stateImageView.setImageResource(resId);
                         break;
                     case 3:
-                        if(!recording) {
+                        if(!mRecordHelper.isRecording()) {
                             initiateRecording(true);
                         } else {
                             //更新暂停的时间
@@ -240,7 +219,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
                             totalPauseTime = stopPauseTime - startPauseTime - ((long) (1.0/(double)frameRate)*1000);
                             pausedTime += totalPauseTime;
                         }
-                        rec = true;
+                        mRecordHelper.setNeedRecordFlag();
                         //开始进度条增长
                         progressView.setCurrentState(State.START);
                         //setTotalVideoTime();
@@ -250,12 +229,12 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
                         progressView.setCurrentState(State.PAUSE);
                         //将暂停的时间戳添加到进度条的队列中
                         progressView.putProgressList((int) totalTime);
-                        rec = false;
+                        mRecordHelper.clearNeedRecordFlag();
                         startPauseTime = System.currentTimeMillis();
-                        if(totalTime >= recordingMinimumTime){
+                        if(mRecordHelper.isMinimumLimit(totalTime)){
                             currentRecorderState = RecorderState.SUCCESS;
                             sendStateUpdateMessage();
-                        }else if(totalTime >= recordingChangeTime){
+                        } else if(totalTime >= recordingChangeTime) {
                             currentRecorderState = RecorderState.CHANGE;
                             sendStateUpdateMessage();
                         }
@@ -286,7 +265,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     }
     private void sendTouchUpMessage() {
         clearTouchMessage();
-        if(rec) {
+        if(mRecordHelper.needRecord()) {
             mHandler.sendEmptyMessage(4);
         }
     }
@@ -352,9 +331,11 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        //Log.i("video", this.getLocalClassName()+"—destory");
-        recording = false;
-        runAudioThread = false;
+        //Log.i("video", this.getLocalClassName()+"—destroy");
+
+        if (null != mRecordHelper) {
+            mRecordHelper.destroy();
+        }
 
         releaseResources();
 
@@ -490,32 +471,19 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
         strVideoPath = Util.createFinalPath(this);//Util.createTempPath(tempFolderPath);
 
         RecorderParameters recorderParameters = Util.getRecorderParameter(currentResolution);
-        sampleRate = recorderParameters.getAudioSamplingRate();
         frameRate = recorderParameters.getVideoFrameRate();
         frameTime = (1000000L / frameRate);
 
         fileVideoPath = new File(strVideoPath);
-        videoRecorder = new NewFFmpegFrameRecorder(strVideoPath, 480, 480, 1);
-        videoRecorder.setFormat(recorderParameters.getVideoOutputFormat());
-        videoRecorder.setSampleRate(recorderParameters.getAudioSamplingRate());
-        videoRecorder.setFrameRate(recorderParameters.getVideoFrameRate());
-        videoRecorder.setVideoCodec(recorderParameters.getVideoCodec());
-        videoRecorder.setVideoQuality(recorderParameters.getVideoQuality());
-        videoRecorder.setAudioQuality(recorderParameters.getVideoQuality());
-        videoRecorder.setAudioCodec(recorderParameters.getAudioCodec());
-        videoRecorder.setVideoBitrate(recorderParameters.getVideoBitrate());
-        videoRecorder.setAudioBitrate(recorderParameters.getAudioBitrate());
 
-        audioRecordRunnable = new AudioRecordRunnable();
-        audioThread = new Thread(audioRecordRunnable);
+        if (mRecordHelper == null) {
+            mRecordHelper = new RecorderHelper(recorderParameters, strVideoPath, 480, 480, 1);
+        }
     }
 
     public void startRecording() {
-        try {
-            videoRecorder.start();
-            audioThread.start();
-        } catch (NewFFmpegFrameRecorder.Exception e) {
-            e.printStackTrace();
+        if (null != mRecordHelper) {
+            mRecordHelper.start();
         }
     }
 
@@ -525,14 +493,15 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
      *
      */
     public class AsyncStopRecording extends AsyncTask<Void,Integer,Void> {
-
         private ProgressBar bar;
         private TextView progress;
         @Override
         protected void onPreExecute() {
             isFinalizing = true;
             recordFinish = true;
-            runAudioThread = false;
+            if (null != mRecordHelper) {
+                mRecordHelper.resetAudio();
+            }
 
             //创建处理进度条
             creatingProgress= new Dialog(FFmpegRecorderActivity.this,R.style.Dialog_loading_noDim);
@@ -627,11 +596,12 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
 
         @Override
         protected Void doInBackground(Void... params) {
-            if(firstData != null)
+            if(firstData != null) {
                 getFirstCapture(firstData);
+            }
+
             isFinalizing = false;
-            if (videoRecorder != null && recording) {
-                recording = false;
+            if (mRecordHelper.testStopVideo()) {
                 releaseResources();
             }
             publishProgress(100);
@@ -643,7 +613,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
             creatingProgress.dismiss();
             registerVideo();
             returnToCaller(true);
-            videoRecorder = null;
+            mRecordHelper.stopVideo();
         }
 
     }
@@ -663,90 +633,10 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
 
     @Override
     public void onBackPressed() {
-        if (recording)
+        if (mRecordHelper.isRecording())
             showCancellDialog();
         else
             videoTheEnd(false);
-    }
-
-    /**
-     * 录制音频的线程
-     * @author QD
-     *
-     */
-    class AudioRecordRunnable implements Runnable {
-        int bufferSize;
-        short[] audioData;
-        int bufferReadResult;
-        private final AudioRecord audioRecord;
-        public volatile boolean isInitialized;
-        private int mCount =0;
-        private AudioRecordRunnable() {
-            bufferSize = AudioRecord.getMinBufferSize(sampleRate,
-                    AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-            audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate,
-                    AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT,bufferSize);
-            audioData = new short[bufferSize];
-        }
-
-        /**
-         * shortBuffer包含了音频的数据和起始位置
-         * @param shortBuffer
-         */
-        private void record(ShortBuffer shortBuffer) {
-            try {
-                synchronized (mAudioRecordLock) {
-                    if (videoRecorder != null) {
-                        this.mCount += shortBuffer.limit();
-                        videoRecorder.record(0,new Buffer[] {shortBuffer});
-                    }
-                    return;
-                }
-            } catch (FrameRecorder.Exception localException){
-                localException.printStackTrace();
-            }
-        }
-
-        /**
-         * 更新音频的时间戳
-         */
-        private void updateTimestamp() {
-            if (videoRecorder != null) {
-                int i = Util.getTimeStampInNsFromSampleCounted(this.mCount);
-                if (mAudioTimestamp != i) {
-                    mAudioTimestamp = i;
-                    mAudioTimeRecorded =  System.nanoTime();
-                }
-            }
-        }
-
-        public void run() {
-            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
-            this.isInitialized = false;
-            if(audioRecord != null) {
-                //判断音频录制是否被初始化
-                while (this.audioRecord.getState() == 0) {
-                    try {
-                        Thread.sleep(100L);
-                    } catch (InterruptedException localInterruptedException) {
-                        localInterruptedException.printStackTrace();
-                    }
-                }
-
-                this.isInitialized = true;
-                this.audioRecord.startRecording();
-                while (((runAudioThread) || (mVideoTimestamp > mAudioTimestamp)) &&
-                        (mAudioTimestamp < (1000 * recordingTime))) {
-                    updateTimestamp();
-                    bufferReadResult = this.audioRecord.read(audioData, 0, audioData.length);
-                    if ((bufferReadResult > 0) && ((recording && rec) || (mVideoTimestamp > mAudioTimestamp)))
-                        record(ShortBuffer.wrap(audioData, 0, bufferReadResult));
-                }
-
-                this.audioRecord.stop();
-                this.audioRecord.release();
-            }
-        }
     }
 
     //获取第一幀的图片
@@ -945,19 +835,20 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
         public void onPreviewFrame(byte[] data, Camera camera) {
             //计算时间戳
             long frameTimeStamp = 0L;
-            if (mAudioTimestamp == 0L && firstTime > 0L) {
+            long audioTimestamp = mRecordHelper.getAudioTimeStamp();
+            if (audioTimestamp == 0L && firstTime > 0L) {
                 frameTimeStamp = 1000L * (System.currentTimeMillis() - firstTime);
-            } else if (mLastAudioTimestamp == mAudioTimestamp) {
-                frameTimeStamp = mAudioTimestamp + frameTime;
+            } else if (mLastAudioTimestamp == audioTimestamp) {
+                frameTimeStamp = audioTimestamp + frameTime;
             } else {
-                long l2 = (System.nanoTime() - mAudioTimeRecorded) / 1000L;
-                frameTimeStamp = l2 + mAudioTimestamp;
-                mLastAudioTimestamp = mAudioTimestamp;
+                long l2 = mRecordHelper.getAudioInterval();
+                frameTimeStamp = l2 + audioTimestamp;
+                mLastAudioTimestamp = audioTimestamp;
             }
 
             //录制视频
             synchronized (mVideoRecordLock) {
-                if (recording && rec && lastSavedframe != null &&
+                if (mRecordHelper.isRecording() && mRecordHelper.needRecord() && lastSavedframe != null &&
                         lastSavedframe.getFrameBytesData() != null && yuvIplImage != null) {
                     //保存某一幀的图片
                     if(isFirstFrame){
@@ -976,7 +867,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
                         nextBtn.setEnabled(true);
                     }
 
-                    if (nextEnabled && totalTime >= recordingMinimumTime) {
+                    if (nextEnabled && mRecordHelper.isMinimumLimit(totalTime)) {
                         sendMiniFilmReadyMessage();
                     }
 
@@ -985,24 +876,13 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
                         sendStateUpdateMessage();
                     }
 
-                    mVideoTimestamp += frameTime;
-                    if(lastSavedframe.getTimeStamp() > mVideoTimestamp) {
-                        mVideoTimestamp = lastSavedframe.getTimeStamp();
-                    }
-
-                    try {
-                        yuvIplImage.getByteBuffer().put(lastSavedframe.getFrameBytesData());
-                        videoRecorder.setTimestamp(lastSavedframe.getTimeStamp());
-                        videoRecorder.record(yuvIplImage);
-                    } catch (com.googlecode.javacv.FrameRecorder.Exception e) {
-                        Log.i("recorder", "录制错误" + e.getMessage());
-                        e.printStackTrace();
-                    }
+                    yuvIplImage.getByteBuffer().put(lastSavedframe.getFrameBytesData());
+                    mRecordHelper.record(yuvIplImage, frameTime, lastSavedframe.getTimeStamp());
                 }
                 byte[] tempData = rotateYUV420Degree90(data, previewWidth, previewHeight);
                 if(cameraSelection == 1)
                     tempData = rotateYUV420Degree270(data, previewWidth, previewHeight);
-                lastSavedframe = new SavedFrames(tempData,frameTimeStamp);
+                lastSavedframe = new SavedFrames(tempData, frameTimeStamp);
             }
         }
     }
@@ -1010,7 +890,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     @Override
     public boolean onTouch(View v, MotionEvent event) {
         if (!recordFinish) {
-            if (totalTime < recordingTime) {
+            if (mRecordHelper.isMaximumLimit(totalTime)) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
                         sendTouchDownMessage();
@@ -1022,7 +902,6 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
                 }
             } else {
                 //如果录制时间超过最大时间，保存视频
-                rec = false;
                 saveRecording();
             }
         }
@@ -1079,12 +958,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
                 previewWidth = previewSize.width;
                 previewHeight = previewSize.height;
                 cameraParameters.setPreviewSize(previewWidth, previewHeight);
-                if(videoRecorder != null)
-                {
-                    videoRecorder.setImageWidth(previewWidth);
-                    videoRecorder.setImageHeight(previewHeight);
-                }
-
+                mRecordHelper.setSize(previewWidth, previewHeight);
             }
         }
         //设置预览帧率
@@ -1165,7 +1039,6 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     @OnClick(R.id.recorder_next)
     public void onNextButtonClicked() {
         if (isRecordingStarted) {
-            rec = false;
             saveRecording();
         } else {
             initiateRecording(false);
@@ -1173,7 +1046,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     }
     @OnClick(R.id.recorder_cancel)
     public void onCancelButtonClicked() {
-        if (recording) {
+        if (mRecordHelper.isRecording()) {
             showCancellDialog();
         } else {
             videoTheEnd(false);
@@ -1249,15 +1122,16 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     /**
      * 保存录制的视频文件
      */
-    private void saveRecording()
-    {
-        if(isRecordingStarted){
-            runAudioThread = false;
+    private void saveRecording() {
+        mRecordHelper.clearNeedRecordFlag();
+
+        if (isRecordingStarted) {
+            mRecordHelper.stopAudio();
             if(!isRecordingSaved){
                 isRecordingSaved = true;
                 new AsyncStopRecording().execute();
             }
-        }else{
+        } else {
             videoTheEnd(false);
         }
     }
@@ -1276,18 +1150,12 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
      */
     private void releaseResources(){
         isRecordingSaved = true;
-        try {
-            if(videoRecorder != null)
-            {
-                videoRecorder.stop();
-                videoRecorder.release();
-            }
-        } catch (com.googlecode.javacv.FrameRecorder.Exception e) {
-            e.printStackTrace();
+
+        if (null != mRecordHelper) {
+            mRecordHelper.release();
         }
 
         yuvIplImage = null;
-        videoRecorder = null;
         lastSavedframe = null;
 
         //progressView.putProgressList((int) totalTime);
@@ -1299,12 +1167,11 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
      * 第一次按下时，初始化录制数据
      * @param isActionDown
      */
-    private void initiateRecording(boolean isActionDown)
-    {
+    private void initiateRecording(boolean isActionDown)  {
         isRecordingStarted = true;
         firstTime = System.currentTimeMillis();
 
-        recording = true;
+        mRecordHelper.setRecording();
         totalPauseTime = 0;
         pausedTime = 0;
 
