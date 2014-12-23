@@ -54,6 +54,7 @@ import android.widget.TextView;
 
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
 import com.qd.recorder.ProgressView.State;
+import com.qd.recorder.helper.CameraWrapper;
 import com.qd.recorder.helper.RecorderHelper;
 import com.qd.recorder.helper.RuntimeHelper;
 import com.qd.videorecorder.R;
@@ -76,6 +77,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
         mWakeLock = null;
     }
 
+    private CameraWrapper mCameraProxy;
     private RecorderHelper mRecordHelper;
 
     //视频文件的存放地址
@@ -106,7 +108,6 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     private boolean isPreviewOn = false;
     //当前录制的质量，会影响视频清晰度和文件大小
     private int currentResolution = CONSTANTS.RESOLUTION_MEDIUM_VALUE;
-    private Camera mCamera;
 
     //预览的宽高和屏幕宽高
     private int previewWidth = 480, screenWidth = 480;
@@ -117,10 +118,9 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     //调用系统的录制音频类
 //    private AudioRecord audioRecord;
 
-    //摄像头以及它的参数
-    private Camera cameraDevice;
+
     private CameraView cameraView;
-    Parameters cameraParameters = null;
+
     //IplImage对象,用于存储摄像头返回的byte[]，以及图片的宽高，depth，channel等
     private IplImage yuvIplImage = null;
     //分别为 默认摄像头（后置）、默认调用摄像头的分辨率、被选择的摄像头（前置或者后置）
@@ -337,24 +337,23 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
             mRecordHelper.destroy();
         }
 
+        if (null != mCameraProxy) {
+            mCameraProxy.destroy();
+        }
+
         releaseResources();
 
         if (cameraView != null) {
             cameraView.stopPreview();
-            if(cameraDevice != null){
-                cameraDevice.setPreviewCallback(null);
-                cameraDevice.release();
-            }
-            cameraDevice = null;
         }
         firstData = null;
-        mCamera = null;
+
         cameraView = null;
 
         releaseWakeLock();
     }
-    private void initLayout()
-    {
+
+    private void initLayout() {
 //        stateImageView = (ImageView) findViewById(R.id.recorder_surface_state);
 
 //        progressView = (ProgressView) findViewById(R.id.recorder_progress);
@@ -375,7 +374,6 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
 
     private void initCameraLayout() {
         new AsyncTask<String, Integer, Boolean>(){
-
             @Override
             protected Boolean doInBackground(String... params) {
                 boolean result = setCamera();
@@ -392,7 +390,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
 
             @Override
             protected void onPostExecute(Boolean result) {
-                if(!result || cameraDevice == null){
+                if(!result || mCameraProxy == null){
                     //FuncCore.showToast(FFmpegRecorderActivity.this, "无法连接到相机");
                     finish();
                     return;
@@ -403,7 +401,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
                     topLayout.removeAllViews();
                 }
 
-                cameraView = new CameraView(FFmpegRecorderActivity.this, cameraDevice);
+                cameraView = new CameraView(FFmpegRecorderActivity.this, mCameraProxy);
 
                 handleSurfaceChanged();
                 //设置surface的宽高
@@ -451,14 +449,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
             }
 
             stopPreview();
-            if(mCamera != null)
-                mCamera.release();
-
-            if(defaultCameraId >= 0) {
-                cameraDevice = Camera.open(defaultCameraId);
-            } else {
-                cameraDevice = Camera.open();
-            }
+            mCameraProxy.setCamera(defaultCameraId);
         } catch(Exception e) {
             return false;
         }
@@ -648,60 +639,49 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
      *
      */
     class CameraView extends SurfaceView implements SurfaceHolder.Callback, PreviewCallback {
-
         private SurfaceHolder mHolder;
+        private CameraWrapper mCameraWrapper;
 
-        public CameraView(Context context, Camera camera) {
+        public CameraView(Context context, CameraWrapper cameraProxy) {
             super(context);
-            mCamera = camera;
-            cameraParameters = mCamera.getParameters();
             mHolder = getHolder();
             mHolder.addCallback(CameraView.this);
             mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-            mCamera.setPreviewCallback(CameraView.this);
+
+            mCameraWrapper = cameraProxy;
+            mCameraWrapper.setPreviewCallBack(CameraView.this);
         }
 
         @Override
         public void surfaceCreated(SurfaceHolder holder) {
-            try {
-                stopPreview();
-                mCamera.setPreviewDisplay(holder);
-            } catch (IOException exception) {
-                mCamera.release();
-                mCamera = null;
-            }
+            stopPreview();
+            mCameraWrapper.setPreviewDisplay(holder);
         }
 
         public void surfaceChanged(SurfaceHolder  holder, int format, int width, int height) {
             if (isPreviewOn) {
-                mCamera.stopPreview();
+                mCameraProxy.stopPreview();
             }
             handleSurfaceChanged();
             startPreview();
-            mCamera.autoFocus(null);
+            mCameraProxy.autoFocus(null);
         }
 
         @Override
         public void surfaceDestroyed(SurfaceHolder holder) {
-            try {
-                mHolder.addCallback(null);
-                mCamera.setPreviewCallback(null);
-            } catch (RuntimeException e) {
-                e.printStackTrace();
-            }
+            mHolder.addCallback(null);
+            mCameraProxy.setPreviewCallBack(null);
         }
 
         public void startPreview() {
-            if (!isPreviewOn && mCamera != null) {
+            if (!isPreviewOn && mCameraProxy.startPreview()) {
                 isPreviewOn = true;
-                mCamera.startPreview();
             }
         }
 
         public void stopPreview() {
-            if (isPreviewOn && mCamera != null) {
+            if (isPreviewOn && mCameraProxy.stopPreview()) {
                 isPreviewOn = false;
-                mCamera.stopPreview();
             }
         }
         private byte[] rotateYUV420Degree90(byte[] data, int imageWidth, int imageHeight) {
@@ -911,89 +891,63 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
      * 关闭摄像头的预览
      */
     public void stopPreview() {
-        if (isPreviewOn && mCamera != null) {
+        if (isPreviewOn && mCameraProxy.stopPreview()) {
             isPreviewOn = false;
-            mCamera.stopPreview();
-
         }
     }
 
-    private void handleSurfaceChanged()
-    {
-        if(mCamera == null){
+    private void handleSurfaceChanged() {
+        //获取摄像头的所有支持的分辨率
+        List<Camera.Size> resolutionList = mCameraProxy.getResolutionList();
+        if (resolutionList == null) {
             //showToast(this, "无法连接到相机");
             finish();
             return;
         }
-        //获取摄像头的所有支持的分辨率
-        List<Camera.Size> resolutionList = Util.getResolutionList(mCamera);
-        if(resolutionList != null && resolutionList.size() > 0){
+
+        if (resolutionList != null && resolutionList.size() > 0) {
             Collections.sort(resolutionList, new Util.ResolutionComparator());
-            Camera.Size previewSize =  null;
-            if(defaultScreenResolution == -1){
+            Camera.Size previewSize = null;
+            if (defaultScreenResolution == -1) {
                 boolean hasSize = false;
                 //如果摄像头支持640*480，那么强制设为640*480
-                for(int i = 0;i<resolutionList.size();i++){
+                for (int i = 0; i < resolutionList.size(); i++) {
                     Size size = resolutionList.get(i);
-                    if(size != null && size.width==640 && size.height==480){
+                    if (size != null && size.width == 640 && size.height == 480) {
                         previewSize = size;
                         hasSize = true;
                         break;
                     }
                 }
                 //如果不支持设为中间的那个
-                if(!hasSize){
-                    int mediumResolution = resolutionList.size()/2;
-                    if(mediumResolution >= resolutionList.size())
+                if (!hasSize) {
+                    int mediumResolution = resolutionList.size() / 2;
+                    if (mediumResolution >= resolutionList.size())
                         mediumResolution = resolutionList.size() - 1;
                     previewSize = resolutionList.get(mediumResolution);
                 }
-            }else{
-                if(defaultScreenResolution >= resolutionList.size())
+            } else {
+                if (defaultScreenResolution >= resolutionList.size()) {
                     defaultScreenResolution = resolutionList.size() - 1;
+                }
                 previewSize = resolutionList.get(defaultScreenResolution);
             }
+
             //获取计算过的摄像头分辨率
-            if(previewSize != null ){
+            if (previewSize != null) {
                 previewWidth = previewSize.width;
                 previewHeight = previewSize.height;
-                cameraParameters.setPreviewSize(previewWidth, previewHeight);
+                mCameraProxy.setSize(previewWidth, previewHeight);
                 mRecordHelper.setSize(previewWidth, previewHeight);
             }
         }
-        //设置预览帧率
-        cameraParameters.setPreviewFrameRate(frameRate);
+
         //构建一个IplImage对象，用于录制视频
         //和opencv中的cvCreateImage方法一样
-        yuvIplImage = IplImage.create(previewHeight, previewWidth,IPL_DEPTH_8U, 2);
+        yuvIplImage = IplImage.create(previewHeight, previewWidth, IPL_DEPTH_8U, 2);
 
-        //系统版本为8一下的不支持这种对焦
-        if(Build.VERSION.SDK_INT >  Build.VERSION_CODES.FROYO)
-        {
-            mCamera.setDisplayOrientation(Util.determineDisplayOrientation(FFmpegRecorderActivity.this, defaultCameraId));
-            List<String> focusModes = cameraParameters.getSupportedFocusModes();
-            if(focusModes != null){
-                Log.i("video", Build.MODEL);
-                if (((Build.MODEL.startsWith("GT-I950"))
-                        || (Build.MODEL.endsWith("SCH-I959"))
-                        || (Build.MODEL.endsWith("MEIZU MX3")))&&focusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)){
-
-                    cameraParameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
-                } else if(focusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO)){
-                    cameraParameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
-                } else {
-                    if (focusModes.contains(Camera.Parameters.FOCUS_MODE_FIXED)) {
-                        cameraParameters.setFocusMode(Camera.Parameters.FOCUS_MODE_FIXED);
-                    } else {
-                        cameraParameters.setFocusMode(focusModes.get(0));
-                    }
-                }
-            }
-        }
-        else
-            mCamera.setDisplayOrientation(90);
-        mCamera.setParameters(cameraParameters);
-
+        final int orientation = Util.determineDisplayOrientation(FFmpegRecorderActivity.this, defaultCameraId);
+        mCameraProxy.updateFrameRateAndOrientation(frameRate, orientation);
     }
 
     @OnClick(R.id.recorder_flashlight)
@@ -1004,18 +958,21 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
             //showToast(this, "不能开启闪光灯");
             return;
         }
+
         //闪光灯
+        final String flashMode;
         if(isFlashOn){
             isFlashOn = false;
             flashIcon.setSelected(false);
-            cameraParameters.setFlashMode(Parameters.FLASH_MODE_OFF);
-        }
-        else{
+            flashMode = Parameters.FLASH_MODE_OFF;
+        } else{
             isFlashOn = true;
             flashIcon.setSelected(true);
-            cameraParameters.setFlashMode(Parameters.FLASH_MODE_TORCH);
+            flashMode = Parameters.FLASH_MODE_TORCH;
         }
-        mCamera.setParameters(cameraParameters);
+        if (null != mCameraProxy) {
+            mCameraProxy.setFlashMode(flashMode);
+        }
     }
 
     @OnClick(R.id.recorder_frontcamera)
@@ -1023,16 +980,15 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
         if (!initSuccess) return;
 
         //转换摄像头
-        cameraSelection = ((cameraSelection == CameraInfo.CAMERA_FACING_BACK) ? CameraInfo.CAMERA_FACING_FRONT:CameraInfo.CAMERA_FACING_BACK);
+        cameraSelection = ((cameraSelection == CameraInfo.CAMERA_FACING_BACK) ? CameraInfo.CAMERA_FACING_FRONT : CameraInfo.CAMERA_FACING_BACK);
         initCameraLayout();
 
-        if(cameraSelection == CameraInfo.CAMERA_FACING_FRONT)
+        if (cameraSelection == CameraInfo.CAMERA_FACING_FRONT) {
             flashIcon.setVisibility(View.GONE);
-        else{
+        } else {
             flashIcon.setVisibility(View.VISIBLE);
-            if(isFlashOn){
-                cameraParameters.setFlashMode(Parameters.FLASH_MODE_TORCH);
-                mCamera.setParameters(cameraParameters);
+            if (isFlashOn){
+                mCameraProxy.setFlashMode(Parameters.FLASH_MODE_TORCH);
             }
         }
     }
