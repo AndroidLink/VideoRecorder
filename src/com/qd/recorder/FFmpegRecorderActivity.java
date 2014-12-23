@@ -449,7 +449,12 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
             }
 
             stopPreview();
-            mCameraProxy.setCamera(defaultCameraId);
+
+            if (null == mCameraProxy) {
+                mCameraProxy = CameraWrapper.open(defaultCameraId);
+            } else {
+                mCameraProxy.setCamera(defaultCameraId);
+            }
         } catch(Exception e) {
             return false;
         }

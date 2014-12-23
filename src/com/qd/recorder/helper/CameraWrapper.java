@@ -16,16 +16,15 @@ import java.util.List;
  */
 public class CameraWrapper {
     //摄像头以及它的参数
-    private Camera cameraDevice;
+//    private Camera cameraDevice;
     private Camera.Parameters cameraParameters = null;
     private Camera mCamera;
 
     public void destroy() {
-        if(cameraDevice != null){
-            cameraDevice.setPreviewCallback(null);
-            cameraDevice.release();
+        if(mCamera != null){
+            mCamera.setPreviewCallback(null);
+            mCamera.release();
         }
-        cameraDevice = null;
         mCamera = null;
     }
 
@@ -95,15 +94,21 @@ public class CameraWrapper {
         return false;
     }
 
+    public static CameraWrapper open(int defaultCameraId) {
+        CameraWrapper wrapper = new CameraWrapper();
+        wrapper.setCamera(defaultCameraId);
+        return wrapper;
+    }
+
     public void setCamera(int defaultCameraId) {
         if(mCamera != null) {
             mCamera.release();
         }
 
         if(defaultCameraId >= 0) {
-            cameraDevice = Camera.open(defaultCameraId);
+            mCamera = Camera.open(defaultCameraId);
         } else {
-            cameraDevice = Camera.open();
+            mCamera = Camera.open();
         }
     }
 
