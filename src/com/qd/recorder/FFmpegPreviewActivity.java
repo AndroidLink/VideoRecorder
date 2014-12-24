@@ -70,7 +70,7 @@ public class FFmpegPreviewActivity extends BaseInjectActivity implements OnCompl
         int displayHeight = RuntimeHelper.getDisplayHeight();
 		LayoutParams layoutParams = (LayoutParams) previewParent.getLayoutParams();
 		layoutParams.width = displayWidth;
-		layoutParams.height = displayHeight;
+		layoutParams.height = displayWidth;
 		previewParent.setLayoutParams(layoutParams);
 		
 		surfaceView.setSurfaceTextureListener(this);
