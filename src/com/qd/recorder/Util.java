@@ -82,13 +82,11 @@ public class Util {
 
 	public static int determineDisplayOrientation(Activity activity, int defaultCameraId) {
 		int displayOrientation = 0;
-		if(Build.VERSION.SDK_INT >  Build.VERSION_CODES.FROYO)
-		{
+		if(Build.VERSION.SDK_INT >  Build.VERSION_CODES.FROYO) {
 			CameraInfo cameraInfo = new CameraInfo();
 			Camera.getCameraInfo(defaultCameraId, cameraInfo);
 
 			int degrees  = getRotationAngle(activity);
-
 
 			if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
 				displayOrientation = (cameraInfo.orientation + degrees) % 360;

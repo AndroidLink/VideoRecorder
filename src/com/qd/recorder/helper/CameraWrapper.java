@@ -1,5 +1,6 @@
 package com.qd.recorder.helper;
 
+import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.os.Build;
@@ -10,6 +11,7 @@ import com.qd.recorder.FFmpegRecorderActivity;
 import com.qd.recorder.Util;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -47,7 +49,9 @@ public class CameraWrapper {
         cameraParameters.setPreviewSize(previewWidth, previewHeight);
     }
 
-    public void updateFrameRateAndOrientation(int frameRate, int orientation) {
+    public void updateFrameRateAndOrientation(int frameRate, Activity activity) {
+        final int orientation = Util.determineDisplayOrientation(activity, defaultCameraId);
+
         //设置预览帧率
         cameraParameters.setPreviewFrameRate(frameRate);
         //系统版本为8一下的不支持这种对焦
@@ -95,13 +99,29 @@ public class CameraWrapper {
         return false;
     }
 
-    public static CameraWrapper open(int defaultCameraId) {
+    public static CameraWrapper open() {
         CameraWrapper wrapper = new CameraWrapper();
-        wrapper.setCamera(defaultCameraId);
+        wrapper.setCamera();
         return wrapper;
     }
 
-    public void setCamera(int defaultCameraId) {
+    public boolean setCamera() {
+        try {
+            if(Build.VERSION.SDK_INT > Build.VERSION_CODES.FROYO) {
+                int numberOfCameras = Camera.getNumberOfCameras();
+
+                Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+                for (int i = 0; i < numberOfCameras; i++) {
+                    Camera.getCameraInfo(i, cameraInfo);
+                    if (cameraInfo.facing == cameraSelection) {
+                        defaultCameraId = i;
+                    }
+                }
+            }
+        } catch(Exception e) {
+            return false;
+        }
+
         if(mCamera != null) {
             mCamera.release();
         }
@@ -111,13 +131,17 @@ public class CameraWrapper {
         } else {
             mCamera = Camera.open();
         }
+
+        return true;
     }
 
     public void setPreviewCallBack(Camera.PreviewCallback previewCallback) {
         // todo : when does camera instant?
 //        mCamera = camera;
-        cameraParameters = mCamera.getParameters();
-        mCamera.setPreviewCallback(previewCallback);
+        if (null != mCamera) {
+            cameraParameters = mCamera.getParameters();
+            mCamera.setPreviewCallback(previewCallback);
+        }
     }
 
     public void setPreviewDisplay(SurfaceHolder holder) {
@@ -140,4 +164,57 @@ public class CameraWrapper {
     public static boolean hasFrontCamera(PackageManager packageManager) {
         return packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT);
     }
+
+    /// camera & resolution begin
+    //分别为 默认摄像头（后置）、默认调用摄像头的分辨率、被选择的摄像头（前置或者后置）
+    private int defaultCameraId = -1;
+    private int defaultScreenResolution = -1;
+    private int cameraSelection = Camera.CameraInfo.CAMERA_FACING_BACK;
+
+    public boolean isFacingFront() {
+        return cameraSelection == Camera.CameraInfo.CAMERA_FACING_FRONT;
+    }
+
+    public void swapCamera() {
+        cameraSelection = isFacingFront() ? Camera.CameraInfo.CAMERA_FACING_BACK :
+                Camera.CameraInfo.CAMERA_FACING_FRONT;
+    }
+
+    public Camera.Size getPreviewSize() {
+        //获取摄像头的所有支持的分辨率
+        List<Camera.Size> resolutionList = getResolutionList();
+        Camera.Size previewSize = null;
+
+        if (resolutionList != null && resolutionList.size() > 0) {
+            Collections.sort(resolutionList, new Util.ResolutionComparator());
+            if (defaultScreenResolution == -1) {
+                //如果摄像头支持640*480，那么强制设为640*480
+                for (int i = 0; i < resolutionList.size(); i++) {
+                    Camera.Size size = resolutionList.get(i);
+                    if (size != null && size.width == 640 && size.height == 480) {
+                        previewSize = size;
+                        break;
+                    }
+                }
+                //如果不支持设为中间的那个
+                if (null == previewSize) {
+                    int mediumResolution = resolutionList.size() / 2;
+                    if (mediumResolution >= resolutionList.size()) {
+                        mediumResolution = resolutionList.size() - 1;
+                    }
+                    previewSize = resolutionList.get(mediumResolution);
+                    defaultScreenResolution = mediumResolution;
+                }
+            } else {
+                if (defaultScreenResolution >= resolutionList.size()) {
+                    defaultScreenResolution = resolutionList.size() - 1;
+                }
+                previewSize = resolutionList.get(defaultScreenResolution);
+            }
+        }
+
+        return previewSize;
+    }
+
+    /// camera & resolution end
 }
