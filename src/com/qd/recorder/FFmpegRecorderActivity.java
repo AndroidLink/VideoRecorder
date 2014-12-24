@@ -93,9 +93,6 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
 
     boolean nextEnabled = false;
 
-    //当前录制的质量，会影响视频清晰度和文件大小
-    private int currentResolution = CONSTANTS.RESOLUTION_MEDIUM_VALUE;
-
     //预览的宽高和屏幕宽高
     private int previewWidth = 480;
     private int previewHeight = 480;
@@ -418,7 +415,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     private void initVideoRecorder() {
         strVideoPath = Util.createFinalPath(this);//Util.createTempPath(tempFolderPath);
 
-        RecorderParameters recorderParameters = Util.getRecorderParameter(currentResolution);
+        RecorderParameters recorderParameters = Util.getRecorderParameter();
         frameRate = recorderParameters.getVideoFrameRate();
         frameTime = (1000000L / frameRate);
 

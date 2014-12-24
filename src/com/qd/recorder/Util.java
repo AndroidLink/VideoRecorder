@@ -43,6 +43,7 @@ import android.widget.Toast;
 
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
 import com.googlecode.javacv.cpp.opencv_highgui.CvCapture;
+import com.qd.recorder.helper.RecorderHelper;
 import com.qd.videorecorder.R;
 
 
@@ -232,6 +233,13 @@ public class Util {
 		return previewSizes;
 	}
 
+
+    //当前录制的质量，会影响视频清晰度和文件大小
+    private static int currentResolution = CONSTANTS.RESOLUTION_MEDIUM_VALUE;
+    public static RecorderParameters getRecorderParameter() {
+        return getRecorderParameter(currentResolution);
+
+    }
 	public static RecorderParameters getRecorderParameter(int currentResolution)
 	{
 		RecorderParameters parameters = new RecorderParameters();
