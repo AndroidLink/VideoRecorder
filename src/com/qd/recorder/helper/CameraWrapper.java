@@ -84,17 +84,23 @@ public class CameraWrapper {
     }
 
     public boolean stopPreview() {
-        if (mCamera != null) {
-            mCamera.stopPreview();
-            return true;
+        if (isPreviewOn) {
+            if (mCamera != null) {
+                mCamera.stopPreview();
+                isPreviewOn = false;
+                return true;
+            }
         }
         return false;
     }
 
     public boolean startPreview() {
-        if (null != mCamera) {
-            mCamera.startPreview();
-            return true;
+        if (!isPreviewOn) {
+            if (null != mCamera) {
+                mCamera.startPreview();
+                isPreviewOn = true;
+                return true;
+            }
         }
         return false;
     }
@@ -217,4 +223,5 @@ public class CameraWrapper {
     }
 
     /// camera & resolution end
+    private boolean isPreviewOn = false;
 }

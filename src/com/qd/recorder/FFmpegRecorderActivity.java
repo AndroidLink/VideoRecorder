@@ -96,8 +96,6 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
 
     boolean nextEnabled = false;
 
-    //判断是否是前置摄像头
-    private boolean isPreviewOn = false;
     //当前录制的质量，会影响视频清晰度和文件大小
     private int currentResolution = CONSTANTS.RESOLUTION_MEDIUM_VALUE;
 
@@ -621,30 +619,24 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
         }
 
         public void surfaceChanged(SurfaceHolder  holder, int format, int width, int height) {
-            if (isPreviewOn) {
-                mCameraProxy.stopPreview();
-            }
+            mCameraWrapper.stopPreview();
             handleSurfaceChanged();
             startPreview();
-            mCameraProxy.autoFocus(null);
+            mCameraWrapper.autoFocus(null);
         }
 
         @Override
         public void surfaceDestroyed(SurfaceHolder holder) {
             mHolder.addCallback(null);
-            mCameraProxy.setPreviewCallBack(null);
+            mCameraWrapper.setPreviewCallBack(null);
         }
 
         public void startPreview() {
-            if (!isPreviewOn && mCameraProxy.startPreview()) {
-                isPreviewOn = true;
-            }
+            mCameraWrapper.startPreview();
         }
 
         public void stopPreview() {
-            if (isPreviewOn && mCameraProxy.stopPreview()) {
-                isPreviewOn = false;
-            }
+            mCameraWrapper.stopPreview();
         }
         private byte[] rotateYUV420Degree90(byte[] data, int imageWidth, int imageHeight) {
             byte [] yuv = new byte[imageWidth*imageHeight*3/2];
@@ -857,8 +849,8 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
      * 关闭摄像头的预览
      */
     public void stopPreview() {
-        if (isPreviewOn && mCameraProxy.stopPreview()) {
-            isPreviewOn = false;
+        if (null != mCameraProxy) {
+            mCameraProxy.stopPreview();
         }
     }
 
