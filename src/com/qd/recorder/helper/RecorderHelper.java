@@ -1,16 +1,22 @@
 package com.qd.recorder.helper;
 
+import android.content.ContentResolver;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
+import android.net.Uri;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 
 import com.googlecode.javacv.FrameRecorder;
 import com.googlecode.javacv.cpp.opencv_core;
+import com.qd.recorder.CONSTANTS;
 import com.qd.recorder.NewFFmpegFrameRecorder;
 import com.qd.recorder.RecorderParameters;
 import com.qd.recorder.Util;
 
+import java.io.File;
 import java.nio.Buffer;
 import java.nio.ShortBuffer;
 
@@ -48,6 +54,9 @@ public class RecorderHelper {
 
     public RecorderHelper(RecorderParameters recorderParameters, String filename, int imageWidth,
                           int imageHeight, int audioChannels) {
+        strVideoPath = filename;
+        fileVideoPath = new File(strVideoPath);
+
         sampleRate = recorderParameters.getAudioSamplingRate();
 
         videoRecorder = new NewFFmpegFrameRecorder(filename, imageWidth, imageHeight, audioChannels);
@@ -255,6 +264,49 @@ public class RecorderHelper {
                 this.audioRecord.release();
             }
         }
+    }
+
+    //视频文件的存放地址
+    private String strVideoPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "rec_video.mp4";
+    //视频文件对象
+    private File fileVideoPath = null;
+    //视频文件在系统中存放的url
+    private Uri uriVideoPath = null;
+
+    public void onComplete(boolean isSuccess) {
+        if(fileVideoPath != null && fileVideoPath.exists() && !isSuccess) {
+            fileVideoPath.delete();
+        }
+    }
+
+    public String getVideoPath() {
+        return strVideoPath;
+    }
+
+    public Uri getVideoUri() {
+        return uriVideoPath;
+    }
+
+    public long getVideoFileLength() {
+        return new File(strVideoPath).length();
+    }
+    /**
+     * 向系统注册我们录制的视频文件，这样文件才会在sd卡中显示
+     */
+    public void registerVideo(ContentResolver contentResolver) {
+        Uri videoTable = Uri.parse(CONSTANTS.VIDEO_CONTENT_URI);
+
+        Util.videoContentValues.put(MediaStore.Video.Media.SIZE, getVideoFileLength());
+        try{
+            uriVideoPath = contentResolver.insert(videoTable, Util.videoContentValues);
+        } catch (Throwable e){
+            uriVideoPath = null;
+            strVideoPath = null;
+            e.printStackTrace();
+        } finally{
+            // do nothing
+        }
+        Util.videoContentValues = null;
     }
 
 }

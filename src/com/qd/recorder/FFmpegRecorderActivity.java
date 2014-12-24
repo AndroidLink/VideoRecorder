@@ -12,14 +12,11 @@ import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.PowerManager;
-import android.provider.MediaStore.Video;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -70,14 +67,6 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
 
     private CameraWrapper mCameraProxy;
     private RecorderHelper mRecordHelper;
-
-    //视频文件的存放地址
-    private String strVideoPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "rec_video.mp4";
-    //视频文件对象
-    private File fileVideoPath = null;
-    //视频文件在系统中存放的url
-    private Uri uriVideoPath = null;
-
 
     //判断是否需要录制，手指按下继续，抬起时暂停
 //    boolean recording = false;
@@ -413,16 +402,12 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
 
 
     private void initVideoRecorder() {
-        strVideoPath = Util.createFinalPath(this);//Util.createTempPath(tempFolderPath);
-
         RecorderParameters recorderParameters = Util.getRecorderParameter();
         frameRate = recorderParameters.getVideoFrameRate();
         frameTime = (1000000L / frameRate);
 
-        fileVideoPath = new File(strVideoPath);
-
         if (mRecordHelper == null) {
-            mRecordHelper = new RecorderHelper(recorderParameters, strVideoPath, 480, 480, 1);
+            mRecordHelper = new RecorderHelper(recorderParameters, Util.createFinalPath(this), 480, 480, 1);
         }
     }
 
@@ -556,11 +541,10 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
         @Override
         protected void onPostExecute(Void result) {
             creatingProgress.dismiss();
-            registerVideo();
             returnToCaller(true);
+            mRecordHelper.registerVideo(getContentResolver());
             mRecordHelper.stopVideo();
         }
-
     }
 
     /**
@@ -865,7 +849,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
 
         //构建一个IplImage对象，用于录制视频
         //和opencv中的cvCreateImage方法一样
-        yuvIplImage = IplImage.create(previewWidth, previewHeight, IPL_DEPTH_8U, 2);
+        yuvIplImage = IplImage.create(previewHeight, previewWidth, IPL_DEPTH_8U, 2);
 
         mCameraProxy.updateFrameRateAndOrientation(frameRate, this);
     }
@@ -925,8 +909,9 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     public void videoTheEnd(boolean isSuccess)
     {
         releaseResources();
-        if(fileVideoPath != null && fileVideoPath.exists() && !isSuccess)
-            fileVideoPath.delete();
+        if (null != mRecordHelper) {
+            mRecordHelper.onComplete(isSuccess);
+        }
 
         returnToCaller(isSuccess);
     }
@@ -940,7 +925,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
             setActivityResult(valid);
             if(valid) {
                 Intent intent = new Intent(this, FFmpegEffectActivity.class);
-                intent.putExtra(CONSTANTS.EXTRA_VIDEO_PATH, strVideoPath);
+                intent.putExtra(CONSTANTS.EXTRA_VIDEO_PATH, mRecordHelper.getVideoPath());
                 intent.putExtra(CONSTANTS.EXTRA_SNAP_PATH, imagePath);
                 startActivity(intent);
             }
@@ -956,32 +941,13 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
         int resultCode;
         if (valid) {
             resultCode = RESULT_OK;
-            resultIntent.setData(uriVideoPath);
+            resultIntent.setData(mRecordHelper.getVideoUri());
         } else {
             resultCode = RESULT_CANCELED;
         }
 
         setResult(resultCode, resultIntent);
     }
-
-    /**
-     * 向系统注册我们录制的视频文件，这样文件才会在sd卡中显示
-     */
-    private void registerVideo()
-    {
-        Uri videoTable = Uri.parse(CONSTANTS.VIDEO_CONTENT_URI);
-
-        Util.videoContentValues.put(Video.Media.SIZE, new File(strVideoPath).length());
-        try{
-            uriVideoPath = getContentResolver().insert(videoTable, Util.videoContentValues);
-        } catch (Throwable e){
-            uriVideoPath = null;
-            strVideoPath = null;
-            e.printStackTrace();
-        } finally{}
-        Util.videoContentValues = null;
-    }
-
 
     /**
      * 保存录制的视频文件
