@@ -12,6 +12,8 @@ import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.view.View;
 
+import com.qd.recorder.helper.RuntimeHelper;
+
 public class ProgressView extends View
 {
 
@@ -67,9 +69,8 @@ public class ProgressView extends View
         breakPaint.setStyle(Paint.Style.FILL);
         breakPaint.setColor(Color.parseColor("#000000"));
 
-        DisplayMetrics dm = new DisplayMetrics();
-        ((Activity)paramContext).getWindowManager().getDefaultDisplay().getMetrics(dm);
-        perPixel = dm.widthPixels/countRecorderTime;
+        DisplayMetrics dm = RuntimeHelper.getDisplayMetrics((Activity)getContext());
+        perPixel = dm.widthPixels / countRecorderTime;
 
         perSecProgress = perPixel;
 

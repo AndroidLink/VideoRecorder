@@ -1,8 +1,12 @@
 package com.qd.recorder.helper;
 
 
+import android.app.Activity;
 import android.content.Context;
 import android.os.PowerManager;
+import android.util.DisplayMetrics;
+
+import com.qd.recorder.FFmpegPreviewActivity;
 
 /**
  * Created by yangfeng on 14/12/21.
@@ -20,5 +24,16 @@ public class RuntimeHelper {
         if (wakeLock != null) {
             wakeLock.release();
         }
+    }
+
+    public static DisplayMetrics getDisplayMetrics(Activity context) {
+        DisplayMetrics dm = new DisplayMetrics();
+        context.getWindowManager().getDefaultDisplay().getMetrics(dm);
+        return dm;
+    }
+
+    public static int getMinDisplaySize(Activity activity) {
+        DisplayMetrics displaymetrics = RuntimeHelper.getDisplayMetrics(activity);
+        return Math.min(displaymetrics.widthPixels, displaymetrics.heightPixels);
     }
 }

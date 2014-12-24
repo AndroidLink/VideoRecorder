@@ -36,7 +36,6 @@ import android.os.Message;
 import android.os.PowerManager;
 import android.provider.MediaStore.Video;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -124,7 +123,9 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     //IplImage对象,用于存储摄像头返回的byte[]，以及图片的宽高，depth，channel等
     private IplImage yuvIplImage = null;
     //分别为 默认摄像头（后置）、默认调用摄像头的分辨率、被选择的摄像头（前置或者后置）
-    int defaultCameraId = -1, defaultScreenResolution = -1 , cameraSelection = 0;
+    int defaultCameraId = -1;
+    int defaultScreenResolution = -1;
+    int cameraSelection = 0;
 
     //Handler handler = new Handler();
 	/*private Runnable mUpdateTimeTask = new Runnable() {
@@ -153,7 +154,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     //录制的有效总时间
     long totalTime = 0;
     //视频帧率
-    private int frameRate = 30;
+    private int frameRate = 60;
     //提示换个场景
     private int recordingChangeTime = 3000;
 
@@ -290,8 +291,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
 
         ensureWakeLock();
 
-        DisplayMetrics displaymetrics = new DisplayMetrics();
-        getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
+        DisplayMetrics displaymetrics = RuntimeHelper.getDisplayMetrics(this);
         //Find screen dimensions
         screenWidth = displaymetrics.widthPixels;
         screenHeight = displaymetrics.heightPixels;
@@ -346,9 +346,9 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
         if (cameraView != null) {
             cameraView.stopPreview();
         }
-        firstData = null;
-
         cameraView = null;
+
+        firstData = null;
 
         releaseWakeLock();
     }

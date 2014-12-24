@@ -19,6 +19,7 @@ import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.RelativeLayout.LayoutParams;
 
+import com.qd.recorder.helper.RuntimeHelper;
 import com.qd.videorecorder.R;
 
 import butterknife.InjectView;
@@ -65,8 +66,7 @@ public class FFmpegPreviewActivity extends BaseInjectActivity implements OnCompl
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_ffmpeg_preview);
 
-		DisplayMetrics displaymetrics = new DisplayMetrics();
-		getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
+        DisplayMetrics displaymetrics = RuntimeHelper.getDisplayMetrics(this);
 		LayoutParams layoutParams = (LayoutParams) previewParent.getLayoutParams();
 		layoutParams.width = displaymetrics.widthPixels;
 		layoutParams.height = displaymetrics.widthPixels;
