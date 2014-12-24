@@ -11,7 +11,6 @@ import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.hardware.Camera;
-import android.hardware.Camera.Parameters;
 import android.hardware.Camera.PreviewCallback;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -84,8 +83,6 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
 //    boolean recording = false;
     //判断是否开始了录制，第一次按下屏幕时设置为true
     boolean	isRecordingStarted = false;
-    //是否开启闪光灯
-    boolean isFlashOn = false;
 
 //    TextView txtTimer, txtRecordingSize;
     //分别为闪光灯按钮、取消按钮、下一步按钮、转置摄像头按钮
@@ -866,11 +863,12 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
         previewWidth = previewSize.width;
         previewHeight = previewSize.height;
         mCameraProxy.setSize(previewWidth, previewHeight);
+
         mRecordHelper.setSize(previewWidth, previewHeight);
 
         //构建一个IplImage对象，用于录制视频
         //和opencv中的cvCreateImage方法一样
-        yuvIplImage = IplImage.create(previewHeight, previewWidth, IPL_DEPTH_8U, 2);
+        yuvIplImage = IplImage.create(previewWidth, previewHeight, IPL_DEPTH_8U, 2);
 
         mCameraProxy.updateFrameRateAndOrientation(frameRate, this);
     }
@@ -884,19 +882,9 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
             return;
         }
 
-        //闪光灯
-        final String flashMode;
-        if(isFlashOn){
-            isFlashOn = false;
-            flashIcon.setSelected(false);
-            flashMode = Parameters.FLASH_MODE_OFF;
-        } else{
-            isFlashOn = true;
-            flashIcon.setSelected(true);
-            flashMode = Parameters.FLASH_MODE_TORCH;
-        }
         if (null != mCameraProxy) {
-            mCameraProxy.setFlashMode(flashMode);
+            boolean flash = mCameraProxy.swapFlashMode();
+            flashIcon.setSelected(flash);
         }
     }
 
@@ -906,18 +894,15 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
 
         //转换摄像头
         mCameraProxy.swapCamera();
-
-        initCameraLayout();
-
         if (mCameraProxy.isFacingFront()) {
             flashIcon.setVisibility(View.GONE);
         } else {
             flashIcon.setVisibility(View.VISIBLE);
-            if (isFlashOn){
-                mCameraProxy.setFlashMode(Parameters.FLASH_MODE_TORCH);
-            }
         }
+
+        initCameraLayout();
     }
+
     @OnClick(R.id.recorder_next)
     public void onNextButtonClicked() {
         if (isRecordingStarted) {

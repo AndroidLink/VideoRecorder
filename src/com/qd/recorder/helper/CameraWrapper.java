@@ -182,8 +182,14 @@ public class CameraWrapper {
     }
 
     public void swapCamera() {
-        cameraSelection = isFacingFront() ? Camera.CameraInfo.CAMERA_FACING_BACK :
-                Camera.CameraInfo.CAMERA_FACING_FRONT;
+        if (isFacingFront()) {
+            cameraSelection =  Camera.CameraInfo.CAMERA_FACING_BACK;
+            if (isFlashOn){
+                setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
+            }
+        } else {
+            cameraSelection = Camera.CameraInfo.CAMERA_FACING_FRONT;
+        }
     }
 
     public Camera.Size getPreviewSize() {
@@ -224,4 +230,21 @@ public class CameraWrapper {
 
     /// camera & resolution end
     private boolean isPreviewOn = false;
+
+    //是否开启闪光灯
+    boolean isFlashOn = false;
+
+    public boolean swapFlashMode() {
+        //闪光灯
+        final String flashMode;
+        if(isFlashOn){
+            isFlashOn = false;
+            flashMode = Camera.Parameters.FLASH_MODE_OFF;
+        } else{
+            isFlashOn = true;
+            flashMode = Camera.Parameters.FLASH_MODE_TORCH;
+        }
+        setFlashMode(flashMode);
+        return isFlashOn;
+    }
 }
