@@ -7,11 +7,15 @@ import android.os.PowerManager;
 import android.util.DisplayMetrics;
 
 import com.qd.recorder.FFmpegPreviewActivity;
+import com.qd.recorder.FFmpegRecorderActivity;
 
 /**
  * Created by yangfeng on 14/12/21.
  */
 public class RuntimeHelper {
+    private static int screenWidth;
+    private static int screenHeight;
+
     public static PowerManager.WakeLock acquireWakeLock(Context context) {
         PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
         PowerManager.WakeLock wakeLock = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK,
@@ -35,5 +39,20 @@ public class RuntimeHelper {
     public static int getMinDisplaySize(Activity activity) {
         DisplayMetrics displaymetrics = RuntimeHelper.getDisplayMetrics(activity);
         return Math.min(displaymetrics.widthPixels, displaymetrics.heightPixels);
+    }
+
+    public static void refreshDisplay(Activity activity) {
+        DisplayMetrics displaymetrics = getDisplayMetrics(activity);
+        //Find screen dimensions
+        screenWidth = displaymetrics.widthPixels;
+        screenHeight = displaymetrics.heightPixels;
+    }
+
+    public static int getDisplayWidth() {
+        return screenWidth;
+    }
+
+    public static int getDisplayHeight() {
+        return screenHeight;
     }
 }

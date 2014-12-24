@@ -1,5 +1,6 @@
 package com.qd.recorder.helper;
 
+import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.os.Build;
 import android.util.Log;
@@ -130,5 +131,13 @@ public class CameraWrapper {
 
     public void autoFocus(Camera.AutoFocusCallback callback) {
         mCamera.autoFocus(callback);
+    }
+
+    public static boolean hasCameraFlash(PackageManager packageManager) {
+        return packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH);
+    }
+
+    public static boolean hasFrontCamera(PackageManager packageManager) {
+        return packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT);
     }
 }

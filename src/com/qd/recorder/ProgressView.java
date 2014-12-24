@@ -69,8 +69,8 @@ public class ProgressView extends View
         breakPaint.setStyle(Paint.Style.FILL);
         breakPaint.setColor(Color.parseColor("#000000"));
 
-        DisplayMetrics dm = RuntimeHelper.getDisplayMetrics((Activity)getContext());
-        perPixel = dm.widthPixels / countRecorderTime;
+        RuntimeHelper.refreshDisplay((Activity)paramContext);
+        perPixel = RuntimeHelper.getDisplayWidth() / countRecorderTime;
 
         perSecProgress = perPixel;
 

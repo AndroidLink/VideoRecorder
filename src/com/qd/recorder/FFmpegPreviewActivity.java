@@ -66,10 +66,11 @@ public class FFmpegPreviewActivity extends BaseInjectActivity implements OnCompl
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_ffmpeg_preview);
 
-        DisplayMetrics displaymetrics = RuntimeHelper.getDisplayMetrics(this);
+        int displayWidth = RuntimeHelper.getDisplayWidth();
+        int displayHeight = RuntimeHelper.getDisplayHeight();
 		LayoutParams layoutParams = (LayoutParams) previewParent.getLayoutParams();
-		layoutParams.width = displaymetrics.widthPixels;
-		layoutParams.height = displaymetrics.widthPixels;
+		layoutParams.width = displayWidth;
+		layoutParams.height = displayHeight;
 		previewParent.setLayoutParams(layoutParams);
 		
 		surfaceView.setSurfaceTextureListener(this);
@@ -77,7 +78,7 @@ public class FFmpegPreviewActivity extends BaseInjectActivity implements OnCompl
 		path = getIntent().getStringExtra(CONSTANTS.EXTRA_VIDEO_PATH);
 
         String snapPath = getIntent().getStringExtra(CONSTANTS.EXTRA_SNAP_PATH);
-        final int maxSize = Math.min(displaymetrics.widthPixels, displaymetrics.heightPixels);
+        final int maxSize = Math.min(displayWidth, displayHeight);
         showBitmapSource(previewParent, snapPath, maxSize);
 		
 		mediaPlayer = new MediaPlayer();

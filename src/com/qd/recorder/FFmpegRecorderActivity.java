@@ -35,7 +35,6 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.PowerManager;
 import android.provider.MediaStore.Video;
-import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -109,8 +108,8 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     private int currentResolution = CONSTANTS.RESOLUTION_MEDIUM_VALUE;
 
     //预览的宽高和屏幕宽高
-    private int previewWidth = 480, screenWidth = 480;
-    private int previewHeight = 480, screenHeight = 800;
+    private int previewWidth = 480;
+    private int previewHeight = 480;
 
 //    //音频的采样率，recorderParameters中会有默认值
 //    private int sampleRate = 44100;
@@ -291,14 +290,15 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
 
         ensureWakeLock();
 
-        DisplayMetrics displaymetrics = RuntimeHelper.getDisplayMetrics(this);
-        //Find screen dimensions
-        screenWidth = displaymetrics.widthPixels;
-        screenHeight = displaymetrics.heightPixels;
-
         initHandler();
 
-        initLayout();
+        if (CameraWrapper.hasFrontCamera(getPackageManager())) {
+            switchCameraIcon.setVisibility(View.VISIBLE);
+        } else {
+            switchCameraIcon.setVisibility(View.GONE);
+        }
+
+        initCameraLayout();
     }
 
     @Override
@@ -353,25 +353,6 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
         releaseWakeLock();
     }
 
-    private void initLayout() {
-//        stateImageView = (ImageView) findViewById(R.id.recorder_surface_state);
-
-//        progressView = (ProgressView) findViewById(R.id.recorder_progress);
-//        cancelBtn = (Button) findViewById(R.id.recorder_cancel);
-//        cancelBtn.setOnClickListener(this);
-//        nextBtn = (Button) findViewById(R.id.recorder_next);
-//        nextBtn.setOnClickListener(this);
-        //txtTimer = (TextView)findViewById(R.id.txtTimer);
-//        flashIcon = (Button)findViewById(R.id.recorder_flashlight);
-//        switchCameraIcon = (Button)findViewById(R.id.recorder_frontcamera);
-//        flashIcon.setOnClickListener(this);
-
-        if (getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT)) {
-            switchCameraIcon.setVisibility(View.VISIBLE);
-        }
-        initCameraLayout();
-    }
-
     private void initCameraLayout() {
         new AsyncTask<String, Integer, Boolean>(){
             @Override
@@ -404,14 +385,18 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
                 cameraView = new CameraView(FFmpegRecorderActivity.this, mCameraProxy);
 
                 handleSurfaceChanged();
+
                 //设置surface的宽高
-                RelativeLayout.LayoutParams layoutParam1 = new RelativeLayout.LayoutParams(screenWidth,(int) (screenWidth*(previewWidth/(previewHeight*1f))));
+                int width = RuntimeHelper.getDisplayWidth();
+                int height = (int) (width * 1.0f * previewWidth / previewHeight);
+                RelativeLayout.LayoutParams layoutParam1 = new RelativeLayout.LayoutParams(width, height);
                 layoutParam1.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
                 //int margin = Util.calculateMargin(previewWidth, screenWidth);
                 //layoutParam1.setMargins(0,margin,0,margin);
 
-                RelativeLayout.LayoutParams layoutParam2 = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.MATCH_PARENT);
-                layoutParam2.topMargin = screenWidth;
+                RelativeLayout.LayoutParams layoutParam2 = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT,
+                        LayoutParams.MATCH_PARENT);
+                layoutParam2.topMargin = width;
 
                 View view = new View(FFmpegRecorderActivity.this);
                 view.setFocusable(false);
@@ -959,7 +944,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     public void onFlashButtonClicked() {
         if (!initSuccess) return;
 
-        if(!getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)){
+        if(!CameraWrapper.hasCameraFlash(getPackageManager())){
             //showToast(this, "不能开启闪光灯");
             return;
         }

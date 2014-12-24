@@ -1,8 +1,11 @@
 package com.qd.recorder;
 
 import android.app.Activity;
+import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
+
+import com.qd.recorder.helper.RuntimeHelper;
 
 import butterknife.ButterKnife;
 
@@ -22,5 +25,11 @@ public class BaseInjectActivity extends Activity {
     public final void setContentView(View view, ViewGroup.LayoutParams params) {
         super.setContentView(view, params);
         ButterKnife.inject(this);
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        RuntimeHelper.refreshDisplay(this);
     }
 }
