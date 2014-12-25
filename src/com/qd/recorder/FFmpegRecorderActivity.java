@@ -4,12 +4,7 @@ package com.qd.recorder;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.graphics.Matrix;
-import android.graphics.Rect;
-import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
 import android.os.AsyncTask;
@@ -17,6 +12,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.PowerManager;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -32,23 +28,14 @@ import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import com.googlecode.javacv.cpp.opencv_core.IplImage;
 import com.qd.recorder.ProgressView.State;
 import com.qd.recorder.helper.CameraWrapper;
 import com.qd.recorder.helper.RecorderHelper;
 import com.qd.recorder.helper.RuntimeHelper;
 import com.qd.videorecorder.R;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-
 import butterknife.InjectView;
 import butterknife.OnClick;
-
-import static com.googlecode.javacv.cpp.opencv_core.IPL_DEPTH_8U;
 
 
 public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouchListener {
@@ -130,7 +117,6 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     //以下两个只做同步标志，没有实际意义
     private final int[] mVideoRecordLock = new int[0];
     private long mLastAudioTimestamp = 0L;
-    private long frameTime = 0L;
 
     //时候保存过视频文件
     private boolean isRecordingSaved = false;
@@ -152,16 +138,6 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
             @Override
             public void dispatchMessage(Message msg) {
                 switch (msg.what) {
-				/*case 1:
-					final byte[] data = (byte[]) msg.obj;
-					ThreadPoolUtils.execute(new Runnable() {
-
-						@Override
-						public void run() {
-							getFirstCapture(data);
-						}
-					});
-					break;*/
                     case 2:
                         int resId = 0;
                         if(currentRecorderState == RecorderState.PRESS){
@@ -399,7 +375,6 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     private void initVideoRecorder() {
         RecorderParameters recorderParameters = Util.getRecorderParameter();
         frameRate = recorderParameters.getVideoFrameRate();
-        frameTime = (1000000L / frameRate);
 
         if (mRecordHelper == null) {
             mRecordHelper = new RecorderHelper(recorderParameters, Util.createFinalPath(this), 480, 480, 1);
@@ -450,79 +425,19 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
 
         @Override
         protected void onProgressUpdate(Integer... values) {
-            progress.setText(values[0]+"%");
+            progress.setText(values[0] + "%");
             bar.setProgress(values[0]);
         }
-
-        /**
-         * 依据byte[]里的数据合成一张bitmap，
-         * 截成480*480，并且旋转90度后，保存到文件
-         * @param data
-         */
-        private void getFirstCapture(byte[] data){
-
-            publishProgress(10);
-
-            String captureBitmapPath = CONSTANTS.CAMERA_FOLDER_PATH;
-
-            captureBitmapPath = Util.createImagePath(FFmpegRecorderActivity.this);
-            YuvImage localYuvImage = new YuvImage(data, 17, previewWidth,previewHeight, null);
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            FileOutputStream outStream = null;
-
-            publishProgress(50);
-
-            try {
-                File file = new File(captureBitmapPath);
-                if(!file.exists())
-                    file.createNewFile();
-                localYuvImage.compressToJpeg(new Rect(0, 0, previewWidth, previewHeight),100, bos);
-                Bitmap localBitmap1 = BitmapFactory.decodeByteArray(bos.toByteArray(),
-                        0,bos.toByteArray().length);
-
-                bos.close();
-
-                Matrix localMatrix = new Matrix();
-                if (!mCameraProxy.isFacingFront())
-                    localMatrix.setRotate(90.0F);
-                else
-                    localMatrix.setRotate(270.0F);
-
-                Bitmap	localBitmap2 = Bitmap.createBitmap(localBitmap1, 0, 0,
-                        localBitmap1.getHeight(),
-                        localBitmap1.getHeight(),
-                        localMatrix, true);
-
-                publishProgress(70);
-
-                ByteArrayOutputStream bos2 = new ByteArrayOutputStream();
-                localBitmap2.compress(Bitmap.CompressFormat.JPEG, 100, bos2);
-
-                outStream = new FileOutputStream(captureBitmapPath);
-                outStream.write(bos2.toByteArray());
-                outStream.close();
-
-                localBitmap1.recycle();
-                localBitmap2.recycle();
-
-                publishProgress(90);
-
-                isFirstFrame = false;
-                imagePath = captureBitmapPath;
-            } catch (FileNotFoundException e) {
-                isFirstFrame = true;
-                e.printStackTrace();
-            } catch (IOException e) {
-                isFirstFrame = true;
-                e.printStackTrace();
-            }
-        }
-
 
         @Override
         protected Void doInBackground(Void... params) {
             if(firstData != null) {
-                getFirstCapture(firstData);
+                getFirstCapture(new RecorderHelper.PublishProgressInterface() {
+                    @Override
+                    public void onProgress(int progress) {
+                        publishProgress(progress);
+                    }
+                }, firstData);
             }
 
             isFinalizing = false;
@@ -539,6 +454,22 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
             returnToCaller(true);
             mRecordHelper.registerVideo(getContentResolver());
             mRecordHelper.stopVideo();
+        }
+    }
+
+    /**
+     * 依据byte[]里的数据合成一张bitmap，
+     * 截成480*480，并且旋转90度后，保存到文件
+     * @param data
+     */
+    private void getFirstCapture(RecorderHelper.PublishProgressInterface asyncStopRecording, byte[] data) {
+        String path = RecorderHelper.getFirstCapture(FFmpegRecorderActivity.this, data,
+                previewWidth, previewHeight,
+                mCameraProxy.isFacingFront(), asyncStopRecording);
+        if (TextUtils.isEmpty(path)) {
+            isFirstFrame = true;
+        } else {
+            isFirstFrame = false;
         }
     }
 
@@ -620,7 +551,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
             if (audioTimestamp == 0L && firstTime > 0L) {
                 frameTimeStamp = 1000L * (System.currentTimeMillis() - firstTime);
             } else if (mLastAudioTimestamp == audioTimestamp) {
-                frameTimeStamp = audioTimestamp + frameTime;
+                frameTimeStamp = audioTimestamp + 1000000L / frameRate;
             } else {
                 long l2 = mRecordHelper.getAudioInterval();
                 frameTimeStamp = l2 + audioTimestamp;
@@ -656,7 +587,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
                         sendStateUpdateMessage();
                     }
 
-                    mRecordHelper.record(frameTime);
+                    mRecordHelper.record(1000000L / frameRate);
                 }
 
                 mRecordHelper.setSavedFrame(mCameraProxy.isFacingFront(), data, frameTimeStamp,

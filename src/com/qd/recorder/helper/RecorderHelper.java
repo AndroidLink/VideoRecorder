@@ -1,6 +1,12 @@
 package com.qd.recorder.helper;
 
 import android.content.ContentResolver;
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
@@ -17,7 +23,11 @@ import com.qd.recorder.RecorderParameters;
 import com.qd.recorder.SavedFrames;
 import com.qd.recorder.Util;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.Buffer;
 import java.nio.ShortBuffer;
 
@@ -470,5 +480,69 @@ public class RecorderHelper {
         }
 
         return yuv;
+    }
+
+
+    public interface PublishProgressInterface {
+        public void onProgress(int progress);
+    }
+
+    public static String getFirstCapture(Context contexts, byte[] data, int width, int height,
+                                          boolean isFacingFront,
+                                          PublishProgressInterface asyncStopRecording) {
+        asyncStopRecording.onProgress(10);
+
+        String captureBitmapPath = Util.createImagePath(contexts);
+        YuvImage localYuvImage = new YuvImage(data, 17, width, height, null);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        FileOutputStream outStream = null;
+
+        asyncStopRecording.onProgress(50);
+
+        try {
+            File file = new File(captureBitmapPath);
+            if(!file.exists()) {
+                file.createNewFile();
+            }
+
+            localYuvImage.compressToJpeg(new Rect(0, 0, width, height),100, bos);
+            Bitmap localBitmap1 = BitmapFactory.decodeByteArray(bos.toByteArray(),
+                    0, bos.toByteArray().length);
+
+            bos.close();
+
+            Matrix localMatrix = new Matrix();
+            if (isFacingFront) {
+                localMatrix.setRotate(270.0F);
+            } else {
+                localMatrix.setRotate(90.0F);
+            }
+
+            Bitmap	localBitmap2 = Bitmap.createBitmap(localBitmap1, 0, 0,
+                    localBitmap1.getHeight(),
+                    localBitmap1.getHeight(),
+                    localMatrix, true);
+
+            asyncStopRecording.onProgress(70);
+
+            ByteArrayOutputStream bos2 = new ByteArrayOutputStream();
+            localBitmap2.compress(Bitmap.CompressFormat.JPEG, 100, bos2);
+
+            outStream = new FileOutputStream(captureBitmapPath);
+            outStream.write(bos2.toByteArray());
+            outStream.close();
+
+            localBitmap1.recycle();
+            localBitmap2.recycle();
+
+            asyncStopRecording.onProgress(90);
+        } catch (FileNotFoundException e) {
+            captureBitmapPath = null;
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+            captureBitmapPath = null;
+        }
+        return captureBitmapPath;
     }
 }
