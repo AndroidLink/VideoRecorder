@@ -65,8 +65,12 @@ public class RecorderHelper {
 
     private final int[] mAudioRecordLock = new int[0];
 
-    public RecorderHelper(RecorderParameters recorderParameters, String filename, int imageWidth,
+    public RecorderHelper(String filename, int imageWidth,
                           int imageHeight, int audioChannels) {
+
+        RecorderParameters recorderParameters = Util.getRecorderParameter();
+        frameRate = recorderParameters.getVideoFrameRate();
+
         strVideoPath = filename;
         fileVideoPath = new File(strVideoPath);
 
@@ -156,8 +160,9 @@ public class RecorderHelper {
         runAudioThread = false;
     }
 
-    public void record(long frameTime) {
+    public void record() {
         try {
+            long frameTime = getNounSecondPerFrame();
             yuvIplImage.getByteBuffer().put(lastSavedframe.getFrameBytesData());
             long timeStamp = lastSavedframe.getTimeStamp();
             mVideoTimestamp += frameTime;
@@ -208,6 +213,14 @@ public class RecorderHelper {
 
     public boolean needRecord() {
         return rec;
+    }
+
+    public int getFrameRate() {
+        return frameRate;
+    }
+
+    public long getMillisPerFrame() {
+        return ((long) (1.0/(double)frameRate)*1000);
     }
 
     /**
@@ -544,5 +557,12 @@ public class RecorderHelper {
             captureBitmapPath = null;
         }
         return captureBitmapPath;
+    }
+
+
+    //视频帧率
+    private int frameRate = 60;
+    public long getNounSecondPerFrame() {
+        return 1000000L / frameRate;
     }
 }

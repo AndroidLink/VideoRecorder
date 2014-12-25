@@ -106,8 +106,6 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
     long stopPauseTime = 0;
     //录制的有效总时间
     long totalTime = 0;
-    //视频帧率
-    private int frameRate = 60;
     //提示换个场景
     private int recordingChangeTime = 3000;
 
@@ -157,7 +155,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
                         } else {
                             //更新暂停的时间
                             stopPauseTime = System.currentTimeMillis();
-                            totalPauseTime = stopPauseTime - startPauseTime - ((long) (1.0/(double)frameRate)*1000);
+                            totalPauseTime = stopPauseTime - startPauseTime - mRecordHelper.getMillisPerFrame();
                             pausedTime += totalPauseTime;
                         }
                         mRecordHelper.setNeedRecordFlag();
@@ -373,11 +371,8 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
 
 
     private void initVideoRecorder() {
-        RecorderParameters recorderParameters = Util.getRecorderParameter();
-        frameRate = recorderParameters.getVideoFrameRate();
-
         if (mRecordHelper == null) {
-            mRecordHelper = new RecorderHelper(recorderParameters, Util.createFinalPath(this), 480, 480, 1);
+            mRecordHelper = new RecorderHelper(Util.createFinalPath(this), 480, 480, 1);
         }
     }
 
@@ -551,7 +546,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
             if (audioTimestamp == 0L && firstTime > 0L) {
                 frameTimeStamp = 1000L * (System.currentTimeMillis() - firstTime);
             } else if (mLastAudioTimestamp == audioTimestamp) {
-                frameTimeStamp = audioTimestamp + 1000000L / frameRate;
+                frameTimeStamp = audioTimestamp + mRecordHelper.getNounSecondPerFrame();
             } else {
                 long l2 = mRecordHelper.getAudioInterval();
                 frameTimeStamp = l2 + audioTimestamp;
@@ -572,7 +567,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
                     }
 
                     //超过最低时间时，下一步按钮可点击
-                    totalTime = System.currentTimeMillis() - firstTime - pausedTime - ((long) (1.0/(double)frameRate)*1000);
+                    totalTime = System.currentTimeMillis() - firstTime - pausedTime - mRecordHelper.getMillisPerFrame();
                     if(!nextEnabled && totalTime >= recordingChangeTime){
                         nextEnabled = true;
                         nextBtn.setEnabled(true);
@@ -587,7 +582,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
                         sendStateUpdateMessage();
                     }
 
-                    mRecordHelper.record(1000000L / frameRate);
+                    mRecordHelper.record();
                 }
 
                 mRecordHelper.setSavedFrame(mCameraProxy.isFacingFront(), data, frameTimeStamp,
@@ -640,7 +635,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
 
         mRecordHelper.setSize(previewWidth, previewHeight);
 
-        mCameraProxy.updateFrameRateAndOrientation(frameRate, this);
+        mCameraProxy.updateFrameRateAndOrientation(mRecordHelper.getFrameRate(), this);
     }
 
     @OnClick(R.id.recorder_flashlight)
