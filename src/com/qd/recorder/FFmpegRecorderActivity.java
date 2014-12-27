@@ -1,7 +1,7 @@
 
 package com.qd.recorder;
 
-import static com.googlecode.javacv.cpp.opencv_core.IPL_DEPTH_8U;
+import static org.bytedeco.javacpp.opencv_core.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -59,8 +59,8 @@ import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import com.googlecode.javacv.FrameRecorder;
-import com.googlecode.javacv.cpp.opencv_core.IplImage;
+import org.bytedeco.javacv.FFmpegFrameRecorder;
+import org.bytedeco.javacv.FrameRecorder;
 import com.qd.recorder.ProgressView.State;
 import com.qd.videorecorder.R;
 
@@ -95,7 +95,7 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
     boolean nextEnabled = false;
 
     //录制视频和保存音频的类
-    private volatile NewFFmpegFrameRecorder videoRecorder;
+    private volatile FFmpegFrameRecorder videoRecorder;
 
     //判断是否是前置摄像头
     private boolean isPreviewOn = false;
@@ -470,7 +470,7 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
         frameTime = (1000000L / frameRate);
 
         fileVideoPath = new File(strVideoPath);
-        videoRecorder = new NewFFmpegFrameRecorder(strVideoPath, 480, 480, 1);
+        videoRecorder = new FFmpegFrameRecorder(strVideoPath, 480, 480, 1);
         videoRecorder.setFormat(recorderParameters.getVideoOutputFormat());
         videoRecorder.setSampleRate(recorderParameters.getAudioSamplingRate());
         videoRecorder.setFrameRate(recorderParameters.getVideoFrameRate());
@@ -491,7 +491,7 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
             videoRecorder.start();
             audioThread.start();
 
-        } catch (NewFFmpegFrameRecorder.Exception e) {
+        } catch (FFmpegFrameRecorder.Exception e) {
             e.printStackTrace();
         }
     }
@@ -681,7 +681,7 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
                     if (videoRecorder != null)
                     {
                         this.mCount += shortBuffer.limit();
-                        videoRecorder.record(0,new Buffer[] {shortBuffer});
+                        videoRecorder.record(new Buffer[] {shortBuffer});
                     }
                     return;
                 }
@@ -991,7 +991,7 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
                         yuvIplImage.getByteBuffer().put(lastSavedframe.getFrameBytesData());
                         videoRecorder.setTimestamp(lastSavedframe.getTimeStamp());
                         videoRecorder.record(yuvIplImage);
-                    } catch (com.googlecode.javacv.FrameRecorder.Exception e) {
+                    } catch (org.bytedeco.javacv.FrameRecorder.Exception e) {
                         Log.i("recorder", "录制错误"+e.getMessage());
                         e.printStackTrace();
                     }
@@ -1278,7 +1278,7 @@ public class FFmpegRecorderActivity extends Activity implements OnClickListener,
                 videoRecorder.stop();
                 videoRecorder.release();
             }
-        } catch (com.googlecode.javacv.FrameRecorder.Exception e) {
+        } catch (org.bytedeco.javacv.FrameRecorder.Exception e) {
             e.printStackTrace();
         }
 
