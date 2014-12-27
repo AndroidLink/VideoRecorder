@@ -427,7 +427,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
         @Override
         protected Void doInBackground(Void... params) {
             if(firstData != null) {
-                getFirstCapture(new RecorderHelper.PublishProgressInterface() {
+                imagePath = getFirstCapture(new RecorderHelper.PublishProgressInterface() {
                     @Override
                     public void onProgress(int progress) {
                         publishProgress(progress);
@@ -457,7 +457,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
      * 截成480*480，并且旋转90度后，保存到文件
      * @param data
      */
-    private void getFirstCapture(RecorderHelper.PublishProgressInterface asyncStopRecording, byte[] data) {
+    private String getFirstCapture(RecorderHelper.PublishProgressInterface asyncStopRecording, byte[] data) {
         String path = RecorderHelper.getFirstCapture(FFmpegRecorderActivity.this, data,
                 previewWidth, previewHeight,
                 mCameraProxy.isFacingFront(), asyncStopRecording);
@@ -466,6 +466,7 @@ public class FFmpegRecorderActivity extends BaseInjectActivity implements OnTouc
         } else {
             isFirstFrame = false;
         }
+        return path;
     }
 
     /**
