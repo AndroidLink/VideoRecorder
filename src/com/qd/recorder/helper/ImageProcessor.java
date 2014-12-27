@@ -1,10 +1,10 @@
 package com.qd.recorder.helper;
-import com.googlecode.javacpp.*;
-import com.googlecode.javacv.*;
-import static com.googlecode.javacv.cpp.opencv_core.*;
-import static com.googlecode.javacv.cpp.opencv_imgproc.*;
-import static com.googlecode.javacv.cpp.opencv_highgui.*;
-import static com.googlecode.javacv.cpp.opencv_features2d.*;
+import org.bytedeco.javacpp.*;
+import org.bytedeco.javacv.*;
+import static org.bytedeco.javacpp.opencv_core.*;
+import static org.bytedeco.javacpp.opencv_imgproc.*;
+import static org.bytedeco.javacpp.opencv_highgui.*;
+import static org.bytedeco.javacpp.opencv_features2d.*;
 
 /**
  * Created by yangfeng on 14/12/27.
@@ -23,7 +23,8 @@ public class ImageProcessor {
     public static void smooth(String filename) {
         IplImage image = cvLoadImage(filename);
         if (image != null) {
-            cvSmooth(image, image, CV_GAUSSIAN, 3);
+//            cvSmooth(image, image, CV_GAUSSIAN, 3);
+            cvSmooth(image, image);
             cvSaveImage(filename, image);
             cvReleaseImage(image);
         }
@@ -40,7 +41,8 @@ public class ImageProcessor {
         src = cvLoadImageM(filename);
         //dst =cvCreateImage( cvSize( src.cvSize().width()+left, src.cvSize().height()+top ), IPL_DEPTH_8U, 3 ).asCvMat();
         dst =  cvCreateMat(src.rows()+left,src.cols()+top,CV_8UC3);
-        value = new CvScalar( 0,0,0,0);
+//        value = new CvScalar(0,0,0,0);
+        value = new CvScalar(0);
         //point为src 在dst图像上的左上角坐标
         CvPoint point=cvPoint(left/2,top/2);
         cvCopyMakeBorder( src, dst, point, borderType, value );
@@ -89,7 +91,8 @@ public class ImageProcessor {
 //    cvSize( 2*1 + 1, 2*1+1 ),
 //    cvPoint( 2, 2 ) );
         /// Apply the dilation operation
-        IplConvKernel kernel=cvCreateStructuringElementEx(3,3,1,1,dilation_type,null);
+//        IplConvKernel kernel=cvCreateStructuringElementEx(3,3,1,1,dilation_type,null);
+        IplConvKernel kernel=cvCreateStructuringElementEx(3,3,1,1,dilation_type);
         cvDilate( src, dilation_dst, kernel,1);
         cvReleaseStructuringElement( kernel );
         cvSaveImage(filename, dilation_dst);
@@ -109,7 +112,8 @@ public class ImageProcessor {
 //    cvSize( 2*1 + 1, 2*1+1 ),
 //    cvPoint( 2, 2 ) );
         /// Apply the dilation operation
-        IplConvKernel kernel=cvCreateStructuringElementEx(3,3,1,1,dilation_type,null);
+//        IplConvKernel kernel=cvCreateStructuringElementEx(3,3,1,1,dilation_type,null);
+        IplConvKernel kernel=cvCreateStructuringElementEx(3,3,1,1,dilation_type);
         cvErode( src, erosion_dst, kernel,1);
         cvReleaseStructuringElement( kernel );
         cvSaveImage(filename, erosion_dst);
@@ -192,7 +196,8 @@ public class ImageProcessor {
         int c;
         src=cvLoadImageM(filename);
         //GaussianBlur( src, src, cvSize(3,3), 0, 0, BORDER_DEFAULT );
-        cvSmooth(src, src, CV_GAUSSIAN, 3);
+//        cvSmooth(src, src, CV_GAUSSIAN, 3);
+        cvSmooth(src, src);
         src_gray=gray(src.asIplImage()).asCvMat();
         CvMat grad_x=null, grad_y=null;
         CvMat abs_grad_x=null, abs_grad_y=null;
@@ -231,7 +236,8 @@ public class ImageProcessor {
     {
         CvMat src, src_gray,dst,abs_dst;
         src=cvLoadImageM(filename);
-        cvSmooth(src, src, CV_GAUSSIAN, 3);
+//        cvSmooth(src, src, CV_GAUSSIAN, 3);
+        cvSmooth(src, src);
         src_gray=gray(src.asIplImage()).asCvMat();
         dst=cvCreateImage(cvGetSize(src), IPL_DEPTH_8U, 1).asCvMat();
         abs_dst=cvCreateImage(cvGetSize(src), IPL_DEPTH_8U, 1).asCvMat();
@@ -258,7 +264,8 @@ public class ImageProcessor {
         src=cvLoadImageM(filename);
         src_gray=gray(src.asIplImage()).asCvMat();
         detected_edges=cvCreateImage(cvGetSize(src), IPL_DEPTH_8U, 1).asCvMat();
-        cvSmooth(src_gray, detected_edges, CV_GAUSSIAN, 3);
+//        cvSmooth(src_gray, detected_edges, CV_GAUSSIAN, 3);
+        cvSmooth(src_gray, detected_edges);
         /**
          * image 输入图像，这个必须是单通道的，即灰度图
          　　edges 输出的边缘图像 ，也是单通道的，但是是黑白的
@@ -269,7 +276,7 @@ public class ImageProcessor {
          * 则被认为是边缘像素，如果小于下限阈值，则被抛弃，
          * 那么如果该店的梯度位于两者之间呢？则当其与高于上限值的像素点连接时我们才保留，否则删除。
          */
-        cvCanny(detected_edges, detected_edges,90,90*3,3);
+        cvCanny(detected_edges, detected_edges, 90, 90 * 3, 3);
         //dst = Scalar::all(0);
         dst=cvCreateMat(src.rows(),src.cols(), src.type());
         //cvSetIdentity(dst,cvRealScalar(0));
@@ -325,11 +332,15 @@ public class ImageProcessor {
             float x0 = a*rho, y0 = b*rho;
             //pt1.position(0).x(Math.round(x0 + 1000*(-b))) ;
             //pt1.position(0).y(Math.round(y0 + 1000*(a)));
-            pt1=new CvPoint(Math.round(x0 + 1000*(-b)),Math.round(y0 + 1000*(a)));
+            pt1=new CvPoint();
+            pt1.x(Math.round(x0 + 1000*(-b)));
+            pt1.y(Math.round(y0 + 1000*(a)));
             //pt2.position(0).x(Math.round(x0 - 1000*(-b)));
             //pt2.position(0).y(Math.round(y0 - 1000*(a)));
-            pt2=new CvPoint(Math.round(x0 - 1000*(-b)),Math.round(y0 - 1000*(a)));
-            cvLine( color_dst, pt1, pt2, CV_RGB(0,0,255), 1, CV_AA,0);
+            pt2=new CvPoint();
+            pt2.x(Math.round(x0 - 1000*(-b)));
+            pt2.y(Math.round(y0 - 1000*(a)));
+            cvLine(color_dst, pt1, pt2, CV_RGB(0, 0, 255), 1, CV_AA, 0);
         }
         cvNamedWindow("Hough");
         cvShowImage( "Hough", color_dst );
@@ -405,7 +416,8 @@ public class ImageProcessor {
         CvMat src, src_gray,color_dst;
         src=cvLoadImageM(filename);//加载灰度图
         src_gray=gray(src.asIplImage()).asCvMat();
-        cvSmooth(src_gray, src_gray, CV_GAUSSIAN, 3);
+//        cvSmooth(src_gray, src_gray, CV_GAUSSIAN, 3);
+        cvSmooth(src_gray, src_gray);
         CvMemStorage storage=cvCreateMemStorage(0);
         /// Apply the Hough Transform to find the circles
         /**
@@ -446,7 +458,9 @@ public class ImageProcessor {
         {
             FloatPointer seq=new FloatPointer(cvGetSeqElem(circles,i));
             System.out.println(seq.get(0)+","+seq.get(1)+","+seq.get(2));
-            CvPoint center=new CvPoint (Math.round(seq.get(0)), Math.round(seq.get(1)));
+            CvPoint center=new CvPoint ();
+            center.x(Math.round(seq.get(0)));
+            center.y(Math.round(seq.get(1)));
             int radius = Math.round(seq.get(2));
             // circle center
             cvCircle( src, center, 3, CV_RGB(0,255,0), -1, 8, 0 );
@@ -783,10 +797,14 @@ public class ImageProcessor {
         cvMatchTemplate( img, templ, result, 0 );
         cvNormalize(result, result, 0,1, NORM_MINMAX ,null);
         /// Localizing the best match with minMaxLoc
-        double minVal[]=new double[5]; double maxVal[]=new double[5]; CvPoint minLoc=new CvPoint();
+//        double minVal[]=new double[5];
+//        double maxVal[]=new double[5];
+        DoublePointer minVal = new DoublePointer();
+        DoublePointer maxVal = new DoublePointer();
+        CvPoint minLoc=new CvPoint();
         CvPoint maxLoc=new CvPoint();
         CvPoint matchLoc=new CvPoint();
-        cvMinMaxLoc( result, minVal, maxVal, minLoc, maxLoc,null);
+        cvMinMaxLoc(result, minVal, maxVal, minLoc, maxLoc,null);
         /// For SQDIFF and SQDIFF_NORMED, the best matches are lower values. For all the other methods, the higher the better
         if( match_method == CV_TM_SQDIFF || match_method == CV_TM_SQDIFF_NORMED )
         { matchLoc = minLoc; }
@@ -796,8 +814,12 @@ public class ImageProcessor {
         CvMat img_display=cvCreateMat( img.cols(),img.rows(), img.type() );;
         cvCopy(img,img_display,null);
         /// Show me what you got
-        cvRectangle( img_display, matchLoc,new CvPoint( matchLoc.x() + templ.cols() , matchLoc.y() + templ.rows() ), new CvScalar(0,0,0,0), 2, 8, 0);
-        cvRectangle( result, matchLoc, new CvPoint( matchLoc.x() + templ.cols() , matchLoc.y() + templ.rows() ), new CvScalar(0,0,0,0), 2, 8, 0 );
+        CvPoint tempLoc = new CvPoint();
+        tempLoc.x(matchLoc.x() + templ.cols()); // matchLoc.x() + templ.cols()
+        tempLoc.y(matchLoc.y() + templ.rows()); // matchLoc.y() + templ.rows()
+        CvScalar scalar = new CvScalar();
+        cvRectangle( img_display, matchLoc, tempLoc, scalar, 2, 8, 0);
+        cvRectangle( result, matchLoc, tempLoc, scalar, 2, 8, 0 );
         cvShowImage( "image_window", img_display );
         cvShowImage( "result_window", result );
     }

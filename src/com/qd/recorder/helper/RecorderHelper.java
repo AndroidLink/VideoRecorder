@@ -15,10 +15,11 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
 
-import com.googlecode.javacv.FrameRecorder;
-import com.googlecode.javacv.cpp.opencv_core;
+import org.bytedeco.javacv.FrameRecorder;
+import org.bytedeco.javacpp.opencv_core;
+import org.bytedeco.javacv.FFmpegFrameRecorder;
+
 import com.qd.recorder.CONSTANTS;
-import com.qd.recorder.NewFFmpegFrameRecorder;
 import com.qd.recorder.RecorderParameters;
 import com.qd.recorder.SavedFrames;
 import com.qd.recorder.Util;
@@ -31,7 +32,7 @@ import java.io.IOException;
 import java.nio.Buffer;
 import java.nio.ShortBuffer;
 
-import static com.googlecode.javacv.cpp.opencv_core.IPL_DEPTH_8U;
+import static org.bytedeco.javacpp.opencv_core.IPL_DEPTH_8U;
 
 /**
  * Created by yangfeng on 14/12/22.
@@ -46,7 +47,7 @@ public class RecorderHelper {
     private boolean rec = false;
     private boolean recording = false;
     //录制视频和保存音频的类
-    private volatile NewFFmpegFrameRecorder videoRecorder;
+    private volatile FFmpegFrameRecorder videoRecorder;
     //录制音频的线程
     private AudioRecordRunnable audioRecordRunnable;
     private Thread audioThread;
@@ -76,7 +77,7 @@ public class RecorderHelper {
 
         sampleRate = recorderParameters.getAudioSamplingRate();
 
-        videoRecorder = new NewFFmpegFrameRecorder(filename, imageWidth, imageHeight, audioChannels);
+        videoRecorder = new FFmpegFrameRecorder(filename, imageWidth, imageHeight, audioChannels);
         videoRecorder.setFormat(recorderParameters.getVideoOutputFormat());
         videoRecorder.setSampleRate(recorderParameters.getAudioSamplingRate());
         videoRecorder.setFrameRate(recorderParameters.getVideoFrameRate());
@@ -100,7 +101,7 @@ public class RecorderHelper {
         try {
             videoRecorder.start();
             audioThread.start();
-        } catch (NewFFmpegFrameRecorder.Exception e) {
+        } catch (FFmpegFrameRecorder.Exception e) {
             e.printStackTrace();
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -116,7 +117,7 @@ public class RecorderHelper {
 
             yuvIplImage = null;
             lastSavedframe = null;
-        } catch (com.googlecode.javacv.FrameRecorder.Exception e) {
+        } catch (org.bytedeco.javacv.FrameRecorder.Exception e) {
             e.printStackTrace();
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -172,7 +173,7 @@ public class RecorderHelper {
 
             videoRecorder.setTimestamp(timeStamp);
             videoRecorder.record(yuvIplImage);
-        } catch (com.googlecode.javacv.FrameRecorder.Exception e) {
+        } catch (org.bytedeco.javacv.FrameRecorder.Exception e) {
             Log.i("recorder", "录制错误" + e.getMessage());
             e.printStackTrace();
         }
@@ -252,7 +253,7 @@ public class RecorderHelper {
                 synchronized (mAudioRecordLock) {
                     if (videoRecorder != null) {
                         this.mCount += shortBuffer.limit();
-                        videoRecorder.record(0,new Buffer[] {shortBuffer});
+                        videoRecorder.record(new Buffer[] {shortBuffer});
                     }
                     return;
                 }

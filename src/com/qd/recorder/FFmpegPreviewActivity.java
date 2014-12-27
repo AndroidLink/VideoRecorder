@@ -18,7 +18,7 @@ import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.RelativeLayout.LayoutParams;
 
-import com.googlecode.javacv.cpp.opencv_core.CvMat;
+import org.bytedeco.javacpp.opencv_core.CvMat;
 
 import com.qd.recorder.helper.BitmapHelper;
 import com.qd.recorder.helper.ImageProcessor;

@@ -2,7 +2,7 @@ package com.qd.recorder;
 
 import android.os.Bundle;
 
-import com.googlecode.javacv.cpp.opencv_core;
+import org.bytedeco.javacpp.opencv_core;
 import com.qd.recorder.helper.BitmapHelper;
 import com.qd.recorder.helper.ImageProcessor;
 import com.qd.videorecorder.R;
