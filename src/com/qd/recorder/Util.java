@@ -30,6 +30,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.provider.MediaStore.Video;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.View;
@@ -146,17 +147,47 @@ public class Util {
 		}
 		return degrees;
 	}
-	
-	public static String createImagePath(Context context){
-		long dateTaken = System.currentTimeMillis();
-		String title = CONSTANTS.FILE_START_NAME + dateTaken;
-		String filename = title + CONSTANTS.IMAGE_EXTENSION;
-		
-		String dirPath = Environment.getExternalStorageDirectory()+"/Android/data/" + context.getPackageName()+"/video";
+
+	public static String createImagePath(Context context) {
+        long dateTaken = System.currentTimeMillis();
+        String title = CONSTANTS.FILE_START_NAME + dateTaken;
+        String filename = title + CONSTANTS.IMAGE_EXTENSION;
+        return createImagePath(context, filename);
+    }
+
+    public static String getExtensionName(String filename) {
+        if ((filename != null) && (filename.length() > 0)) {
+            int dot = filename.lastIndexOf('.');
+            if ((dot >-1) && (dot < (filename.length() - 1))) {
+                return filename.substring(dot + 1);
+            }
+        }
+        return filename;
+    }
+    public static String getFileNameNoEx(String filename) {
+        if ((filename != null) && (filename.length() > 0)) {
+            int dot = filename.lastIndexOf('.');
+            if ((dot >-1) && (dot < (filename.length()))) {
+                return filename.substring(0, dot);
+            }
+        }
+        return filename;
+    }
+    public static String createImagePath(String originPath, String nameSuffix) {
+        File file = new File(originPath);
+        String parentPath = file.getParent();
+        String fileName = file.getName();
+        String extName = getExtensionName(fileName);
+        String newName = getFileNameNoEx(fileName) + nameSuffix + extName;
+        return parentPath + newName;
+    }
+
+    public static String createImagePath(Context context, String fileName) {
+        String dirPath = Environment.getExternalStorageDirectory()+"/Android/data/" + context.getPackageName()+"/video";
 		File file = new File(dirPath);
 		if(!file.exists() || !file.isDirectory())
 			file.mkdirs();
-		String filePath = dirPath + "/" + filename;
+		String filePath = dirPath + "/" + fileName;
 		return filePath;
 	}
 

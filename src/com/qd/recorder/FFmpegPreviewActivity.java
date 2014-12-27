@@ -11,7 +11,6 @@ import android.media.MediaPlayer.OnCompletionListener;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.DisplayMetrics;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
@@ -19,6 +18,10 @@ import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.RelativeLayout.LayoutParams;
 
+import com.googlecode.javacv.cpp.opencv_core.CvMat;
+
+import com.qd.recorder.helper.BitmapHelper;
+import com.qd.recorder.helper.ImageProcessor;
 import com.qd.recorder.helper.RuntimeHelper;
 import com.qd.videorecorder.R;
 
@@ -29,6 +32,7 @@ public class FFmpegPreviewActivity extends BaseInjectActivity implements OnCompl
         TextureView.SurfaceTextureListener {
 
 	private String path;
+    private String imgPath;
     private MediaPlayer mediaPlayer;
 
     @InjectView(R.id.preview_video_parent) RelativeLayout previewParent;
@@ -61,29 +65,38 @@ public class FFmpegPreviewActivity extends BaseInjectActivity implements OnCompl
         stop();
     }
 
+    @OnClick(R.id.play_next)
+    public void onNextViewClicked() {
+    }
+
     @Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_ffmpeg_preview);
 
-        int displayWidth = RuntimeHelper.getDisplayWidth();
-        int displayHeight = RuntimeHelper.getDisplayHeight();
-		LayoutParams layoutParams = (LayoutParams) previewParent.getLayoutParams();
-		layoutParams.width = displayWidth;
-		layoutParams.height = displayWidth;
-		previewParent.setLayoutParams(layoutParams);
-		
-		surfaceView.setSurfaceTextureListener(this);
 
-		path = getIntent().getStringExtra(CONSTANTS.EXTRA_VIDEO_PATH);
+        path = getIntent().getStringExtra(CONSTANTS.EXTRA_VIDEO_PATH);
+        imgPath = getIntent().getStringExtra(CONSTANTS.EXTRA_SNAP_PATH);
 
-        String snapPath = getIntent().getStringExtra(CONSTANTS.EXTRA_SNAP_PATH);
-        final int maxSize = Math.min(displayWidth, displayHeight);
-        showBitmapSource(previewParent, snapPath, maxSize);
-		
+        initParentSurfaceView();
+
+        surfaceView.setSurfaceTextureListener(this);
+
 		mediaPlayer = new MediaPlayer();
 		mediaPlayer.setOnCompletionListener(this);
 	}
+
+    int maxSize;
+    private void initParentSurfaceView() {
+        int displayWidth = RuntimeHelper.getDisplayWidth();
+        int displayHeight = RuntimeHelper.getDisplayHeight();
+        LayoutParams layoutParams = (LayoutParams) previewParent.getLayoutParams();
+        layoutParams.width = displayWidth;
+        layoutParams.height = displayWidth;
+        previewParent.setLayoutParams(layoutParams);
+        maxSize = Math.min(displayWidth, displayHeight);
+        BitmapHelper.showBitmapBackground(previewParent, imgPath, maxSize);
+    }
 
 	@Override
 	protected void onStop() {
@@ -147,48 +160,5 @@ public class FFmpegPreviewActivity extends BaseInjectActivity implements OnCompl
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-    protected static void showBitmapSource(View view, String imgPath, int maxSize) {
-        if (null != view && !TextUtils.isEmpty(imgPath)) {
-            // First decode with inJustDecodeBounds=true to check dimensions
-            final BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inJustDecodeBounds = true;
-            BitmapFactory.decodeFile(imgPath, options);
-
-            // Calculate inSampleSize
-            options.inSampleSize = calculateInSampleSize(options, maxSize, maxSize);
-
-            // Decode bitmap with inSampleSize set
-            options.inJustDecodeBounds = false;
-            Bitmap bitmap = BitmapFactory.decodeFile(imgPath, options);
-            BitmapDrawable drawable = new BitmapDrawable(view.getResources(), bitmap);
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
-                view.setBackgroundDrawable(drawable);
-            } else {
-                view.setBackground(drawable);
-            }
-        }
-    }
-    public static int calculateInSampleSize(
-            BitmapFactory.Options options, int reqWidth, int reqHeight) {
-        // Raw height and width of image
-        final int height = options.outHeight;
-        final int width = options.outWidth;
-        int inSampleSize = 1;
-
-        if (height > reqHeight || width > reqWidth) {
-
-            final int halfHeight = height / 2;
-            final int halfWidth = width / 2;
-
-            // Calculate the largest inSampleSize value that is a power of 2 and keeps both
-            // height and width larger than the requested height and width.
-            while ((halfHeight / inSampleSize) > reqHeight
-                    && (halfWidth / inSampleSize) > reqWidth) {
-                inSampleSize *= 2;
-            }
-        }
-
-        return inSampleSize;
     }
 }
