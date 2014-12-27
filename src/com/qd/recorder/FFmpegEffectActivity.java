@@ -1,6 +1,7 @@
 package com.qd.recorder;
 
 import android.os.Bundle;
+import android.text.TextUtils;
 
 import org.bytedeco.javacpp.opencv_core;
 import com.qd.recorder.helper.BitmapHelper;
@@ -25,7 +26,7 @@ public class FFmpegEffectActivity extends FFmpegPreviewActivity {
 
     @OnClick(R.id.play_next)
     public void onNextViewClicked() {
-//        testImageEffect();
+        testImageEffect();
     }
 
 
@@ -88,8 +89,12 @@ public class FFmpegEffectActivity extends FFmpegPreviewActivity {
             mIsProcessing = true;
         }
 
-        String effectPath = Util.createImagePath(mSnapPath, EFFECT_SUFFIX);
-        ImageProcessor.clone(mSnapPath, effectPath);
+        String effectPath = Util.duplicate(mSnapPath, EFFECT_SUFFIX);
+        if (TextUtils.isEmpty(effectPath)) {
+            // todo: error met.
+            return;
+        }
+//        ImageProcessor.clone(mSnapPath, effectPath);
 
         switch (mOperatorIndex) {
             default:

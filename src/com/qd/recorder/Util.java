@@ -3,8 +3,10 @@ package com.qd.recorder;
 import static org.bytedeco.javacpp.opencv_highgui.cvCreateFileCapture;
 import static org.bytedeco.javacpp.opencv_highgui.cvQueryFrame;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -178,8 +180,8 @@ public class Util {
         String parentPath = file.getParent();
         String fileName = file.getName();
         String extName = getExtensionName(fileName);
-        String newName = getFileNameNoEx(fileName) + nameSuffix + extName;
-        return parentPath + newName;
+        String newName = getFileNameNoEx(fileName) + nameSuffix + "." + extName;
+        return parentPath + File.separator + newName;
     }
 
     public static String createImagePath(Context context, String fileName) {
@@ -332,7 +334,51 @@ public class Util {
 
 	}
 
-	public static class ResolutionComparator implements Comparator<Camera.Size> {
+    public static String duplicate(String filePath, String suffix) {
+        String newPath = createImagePath(filePath, suffix);
+        File dstFile = new File(newPath);
+        if (dstFile.exists()) {
+            dstFile.delete();
+        }
+        File srcFile = new File(filePath);
+        if (srcFile.exists()) {
+            try {
+                copyFile(srcFile, dstFile);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                newPath = null;
+            }
+        }
+        return newPath;
+    }
+    public static void copyFile(File sourceFile, File targetFile) throws IOException {
+        BufferedInputStream inBuff = null;
+        BufferedOutputStream outBuff = null;
+        try {
+            // 新建文件输入流并对它进行缓冲
+            inBuff = new BufferedInputStream(new FileInputStream(sourceFile));
+
+            // 新建文件输出流并对它进行缓冲
+            outBuff = new BufferedOutputStream(new FileOutputStream(targetFile));
+
+            // 缓冲数组
+            byte[] b = new byte[1024 * 5];
+            int len;
+            while ((len = inBuff.read(b)) != -1) {
+                outBuff.write(b, 0, len);
+            }
+            // 刷新此缓冲的输出流
+            outBuff.flush();
+        } finally {
+            // 关闭流
+            if (inBuff != null)
+                inBuff.close();
+            if (outBuff != null)
+                outBuff.close();
+        }
+    }
+
+    public static class ResolutionComparator implements Comparator<Camera.Size> {
 		@Override
 		public int compare(Camera.Size size1, Camera.Size size2) {
 			if(size1.height != size2.height)
