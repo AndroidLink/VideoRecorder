@@ -2,6 +2,7 @@ package com.qd.recorder.helper;
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacv.*;
 import static org.bytedeco.javacpp.opencv_core.*;
+import static org.bytedeco.javacpp.opencv_highgui.cvSaveImage;
 import static org.bytedeco.javacpp.opencv_imgproc.*;
 import static org.bytedeco.javacpp.opencv_highgui.*;
 import static org.bytedeco.javacpp.opencv_features2d.*;
@@ -10,15 +11,6 @@ import static org.bytedeco.javacpp.opencv_features2d.*;
  * Created by yangfeng on 14/12/27.
  */
 public class ImageProcessor {
-    public static void clone(String filename, String newFileName) {
-        IplImage image = cvLoadImage(filename);
-        if (image != null) {
-//            cvSmooth(image, image, CV_GAUSSIAN, 3);
-            cvSaveImage(newFileName, image);
-            cvReleaseImage(image);
-        }
-    }
-
     //平滑
     public static void smooth(String filename) {
         IplImage image = cvLoadImage(filename);
@@ -185,6 +177,16 @@ public class ImageProcessor {
         //cvSaveImage("D:\\IBM\\gray.jpg",pGrayImg);
     }
 
+    public static void gray(String filename) {
+        IplImage image = cvLoadImage(filename);
+        IplImage grayImage = gray(image);
+        if (grayImage != null) {
+            cvSaveImage(filename, grayImage);
+            cvReleaseImage(image);
+            cvReleaseImage(grayImage);
+        }
+    }
+
     //sobel边缘检测
     public static void sobel(String filename)
     {
@@ -222,7 +224,7 @@ public class ImageProcessor {
         /// Total Gradient (approximate)
         grad=cvCreateImage(cvGetSize(src), IPL_DEPTH_8U, 1).asCvMat();
         cvAddWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0,grad );
-        cvSaveImage("D:\\IBM\\sobel.jpg",grad);
+        cvSaveImage(filename,grad);
 
     }
     /**
@@ -248,7 +250,7 @@ public class ImageProcessor {
          */
         cvLaplace( src_gray, dst,3);
         cvConvertScaleAbs( dst, abs_dst,1,0);
-        cvWaitKey(0);
+//        cvWaitKey(0);
     }
     /**
      *
@@ -282,7 +284,7 @@ public class ImageProcessor {
         //cvSetIdentity(dst,cvRealScalar(0));
         cvSet(dst, cvScalar(0,0,0,0),null);
         cvCopy( src,dst,detected_edges);
-        cvSaveImage("D:\\IBM\\canny.jpg",dst);
+        cvSaveImage(filename,dst);
     }
     /**
      *
@@ -342,9 +344,9 @@ public class ImageProcessor {
             pt2.y(Math.round(y0 - 1000*(a)));
             cvLine(color_dst, pt1, pt2, CV_RGB(0, 0, 255), 1, CV_AA, 0);
         }
-        cvNamedWindow("Hough");
-        cvShowImage( "Hough", color_dst );
-        cvWaitKey();
+//        cvNamedWindow("Hough");
+//        cvShowImage( "Hough", color_dst );
+//        cvWaitKey();
     }
     /**
      *
@@ -398,9 +400,9 @@ public class ImageProcessor {
             cvLine( color_dst,new CvPoint(line.position(0)),new CvPoint(line.position(1)), CV_RGB( 0, 255, 0 ),1,CV_AA,0 );  //将找到的直线标记为红色
             //color_dst是三通道图像用来存直线图像
         }
-        cvNamedWindow("Hough");
-        cvShowImage( "Hough", color_dst );
-        cvWaitKey();
+//        cvNamedWindow("Hough");
+//        cvShowImage( "Hough", color_dst );
+//        cvWaitKey();
         //Canvas.showImage(color_dst);
         // cvSaveImage("D:\\IBM\\houghLineCV_AA.jpg",color_dst);
     }
@@ -468,9 +470,9 @@ public class ImageProcessor {
             cvCircle( src, center, radius, CV_RGB(255,0,0), 3, 8, 0 );
         }
         /// Show your results
-        cvNamedWindow( "Hough Circle Transform Demo", CV_WINDOW_AUTOSIZE );
-        cvShowImage( "Hough Circle Transform Demo", src );
-        cvWaitKey(0);
+//        cvNamedWindow( "Hough Circle Transform Demo", CV_WINDOW_AUTOSIZE );
+//        cvShowImage( "Hough Circle Transform Demo", src );
+//        cvWaitKey(0);
 
     }
     /**
@@ -489,12 +491,12 @@ public class ImageProcessor {
         /// Apply Histogram Equalization
         cvEqualizeHist( src_gray, dst );
         /// Display results
-        cvNamedWindow( "source_window", CV_WINDOW_AUTOSIZE );
-        cvNamedWindow( "equalized_window", CV_WINDOW_AUTOSIZE );
-        cvShowImage( "source_window", src );
-        cvShowImage( "equalized_window", dst );
+//        cvNamedWindow( "source_window", CV_WINDOW_AUTOSIZE );
+//        cvNamedWindow( "equalized_window", CV_WINDOW_AUTOSIZE );
+//        cvShowImage( "source_window", src );
+//        cvShowImage( "equalized_window", dst );
         /// Wait until user exits the program
-        cvWaitKey(0);
+//        cvWaitKey(0);
     }
     /**
      *
@@ -572,9 +574,9 @@ public class ImageProcessor {
                     CV_RGB( 0, 0, 255), 2, 8, 0 );
         }
         /// Display
-        cvNamedWindow("calcHist Demo", CV_WINDOW_AUTOSIZE );
-        cvShowImage("calcHist Demo", histImage );
-        cvWaitKey(0);
+//        cvNamedWindow("calcHist Demo", CV_WINDOW_AUTOSIZE );
+//        cvShowImage("calcHist Demo", histImage );
+//        cvWaitKey(0);
     }
     /**
      *
@@ -649,9 +651,9 @@ public class ImageProcessor {
                     CV_RGB( 0, 0, 255), 2, 8, 0 );
         }
         /// Display
-        cvNamedWindow("calcHist Demo", CV_WINDOW_AUTOSIZE );
-        cvShowImage("calcHist Demo", histImage );
-        cvWaitKey(0);
+//        cvNamedWindow("calcHist Demo", CV_WINDOW_AUTOSIZE );
+//        cvShowImage("calcHist Demo", histImage );
+//        cvWaitKey(0);
     }
 
     public static void histogramComparison(String src,String test1,String test2)
@@ -772,9 +774,9 @@ public class ImageProcessor {
         IplImage result=cvCreateImage(cvGetSize(target),IPL_DEPTH_8U,1);
 
         cvCalcBackProject(target_hues,result,hist);
-        cvShowImage( "BackProj", result );
+//        cvShowImage( "BackProj", result );
         //cvShowImage( "src", target );
-        cvWaitKey(0);
+//        cvWaitKey(0);
     }
 
     /**
@@ -820,46 +822,7 @@ public class ImageProcessor {
         CvScalar scalar = new CvScalar();
         cvRectangle( img_display, matchLoc, tempLoc, scalar, 2, 8, 0);
         cvRectangle( result, matchLoc, tempLoc, scalar, 2, 8, 0 );
-        cvShowImage( "image_window", img_display );
-        cvShowImage( "result_window", result );
-    }
-    public static void main(String...strings){
-        //Smoother.smooth("D:\\IBM\\test.JPG");
-        //Smoother.padding("D:\\IBM\\pad.JPG");
-        // Smoother.pyramid_up("D:\\IBM\\pad.JPG");
-        //Smoother.pyramid_down("D:\\IBM\\pad.JPG");
-//    morphology_Dilation("D:\\IBM\\morp.JPG",0);
-//    morphology_Dilation("D:\\IBM\\morp.JPG",1);
-//    morphology_Dilation("D:\\IBM\\morp.JPG",2);
-
-//    morphology_Erosion("D:\\IBM\\morp.JPG",0);
-//    morphology_Erosion("D:\\IBM\\morp.JPG",1);
-//    morphology_Erosion("D:\\IBM\\morp.JPG",2);
-//    Thresholding("D:\\IBM\\pad32.jpg",0);
-//    Thresholding("D:\\IBM\\morp.jpg",1);
-//    Thresholding("D:\\IBM\\morp.jpg",2);
-//    Thresholding("D:\\IBM\\morp.jpg",3);
-//    Thresholding("D:\\IBM\\morp.jpg",4);
-        //gray("D:\\IBM\\pad32.jpg");
-        //sobel("D:\\IBM\\pad32.jpg");
-        //laplacian("D:\\IBM\\pad32.jpg");
-        //canny("D:\\IBM\\pad32.jpg");
-        // houghLine("D:\\IBM\\luoma.jpg");
-        //standardHoughLine("D:\\IBM\\luoma.jpg");
-        //houghCircle("D:\\IBM\\177.jpg");
-        //histogramEqualization("D:\\IBM\\040.jpg");
-        // histogramCalculationFor1("D:\\IBM\\pad32.jpg");
-        //histogramCalculationFor0("D:\\IBM\\pad32.jpg");
-        //histogramComparison("D:\\IBM\\morp.JPG","D:\\IBM\\177.jpg","D:\\IBM\\pad32.jpg");
-        backProjection("D:\\IBM\\hand2.jpg",2);
-        backProjection("D:\\IBM\\hand2.jpg",5);
-//    backProjection("D:\\IBM\\hand2.jpg",10);
-//    backProjection("D:\\IBM\\hand2.jpg",12);
-//    backProjection("D:\\IBM\\hand2.jpg",20);
-//    backProjection("D:\\IBM\\hand2.jpg",40);
-//    backProjection("D:\\IBM\\hand2.jpg",80);
-//    backProjection("D:\\IBM\\hand2.jpg",120);
-//    backProjection("D:\\IBM\\hand2.jpg",200);
-//    backProjection("D:\\IBM\\hand2.jpg",255);
+//        cvShowImage( "image_window", img_display );
+//        cvShowImage( "result_window", result );
     }
 }

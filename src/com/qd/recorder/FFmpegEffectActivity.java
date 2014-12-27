@@ -2,12 +2,14 @@ package com.qd.recorder;
 
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.widget.Button;
 
 import org.bytedeco.javacpp.opencv_core;
 import com.qd.recorder.helper.BitmapHelper;
 import com.qd.recorder.helper.ImageProcessor;
 import com.qd.videorecorder.R;
 
+import butterknife.InjectView;
 import butterknife.OnClick;
 
 /**
@@ -16,6 +18,9 @@ import butterknife.OnClick;
 public class FFmpegEffectActivity extends FFmpegPreviewActivity {
     private String mVideoPath;
     private String mSnapPath;
+
+    @InjectView(R.id.play_next)
+    Button mPlayButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -141,13 +146,48 @@ public class FFmpegEffectActivity extends FFmpegPreviewActivity {
             case 14:
                 ImageProcessor.thresholding(effectPath, 4);
                 break;
+            case 15:
+                ImageProcessor.gray(effectPath);
+                break;
+            case 16:
+                ImageProcessor.sobel(effectPath);
+                break;
+            case 17:
+                ImageProcessor.laplacian(effectPath);
+                break;
+            case 18:
+                ImageProcessor.canny(effectPath);
+                break;
+            case 19:
+                ImageProcessor.standardHoughLine(effectPath);
+                break;
+            case 20:
+                ImageProcessor.houghLine(effectPath);
+                break;
+            case 21:
+                ImageProcessor.houghCircle(effectPath);
+                break;
+            case 22:
+                ImageProcessor.histogramEqualization(effectPath);
+                break;
+            case 23:
+                ImageProcessor.histogramCalculationFor1(effectPath);
+                break;
+            case 24:
+                ImageProcessor.histogramCalculationFor0(effectPath);
+                break;
+            case 25:
+                ImageProcessor.backProjection(effectPath, 50);
+                break;
+
         }
 
         synchronized (mProcessingLock) {
             BitmapHelper.showBitmapBackground(previewParent, effectPath, maxSize);
 
             mOperatorIndex++;
-            mOperatorIndex %= (14);
+            mOperatorIndex %= (25);
+            mPlayButton.setText(String.valueOf(mOperatorIndex));
             mIsProcessing = false;
         }
     }
